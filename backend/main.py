@@ -96,6 +96,45 @@ if os.path.exists(WORKFLOW_PATH):
         WORKFLOW_TEMPLATE = json.load(f)
 
 
+def get_workflow_template():
+    global WORKFLOW_TEMPLATE
+    if WORKFLOW_TEMPLATE is not None:
+        return WORKFLOW_TEMPLATE
+    if GCS_BUCKET_NAME:
+        from google.cloud import storage
+
+        client = storage.Client()
+        blob = client.bucket(GCS_BUCKET_NAME).blob("config/video_ltx2_3_i2v_workflow.json")
+        if blob.exists():
+            WORKFLOW_TEMPLATE = json.loads(blob.download_as_text())
+            logger.info("Loaded workflow template from private GCS bucket", extra={"event": "workflow_loaded_gcs"})
+            return WORKFLOW_TEMPLATE
+    return None
+
+
+def sign_gcs_url(blob, method: str, expiration_minutes: int = 30, content_type: str = None):
+    import google.auth
+    from google.auth.transport.requests import Request as GoogleAuthRequest
+
+    credentials, _ = google.auth.default()
+    if not credentials.valid or not credentials.token:
+        credentials.refresh(GoogleAuthRequest())
+
+    kwargs = {
+        "version": "v4",
+        "expiration": datetime.timedelta(minutes=expiration_minutes),
+        "method": method,
+    }
+    if content_type:
+        kwargs["content_type"] = content_type
+
+    if not hasattr(credentials, "signer"):
+        kwargs["service_account_email"] = credentials.service_account_email
+        kwargs["access_token"] = credentials.token
+
+    return blob.generate_signed_url(**kwargs)
+
+
 def get_db_connection():
     return psycopg2.connect(host=DB_HOST, dbname=DB_NAME, user=DB_USER, password=DB_PASS, connect_timeout=2)
 
@@ -222,12 +261,14 @@ async def generate_video(
     except Exception as exc:
         logger.warning(f"Redis write skipped: {exc}", extra={"job_id": job_id, "event": "redis_warning"})
 
+    out_path = f"outputs/{job_id}.mp4" if use_gpu_worker else None
+
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO video_jobs (job_id, mode, voice_lang, status, served_by_vm) VALUES (%s, %s, %s, %s, %s)",
-            (job_id, execution_mode, clean_lang, "processing", hostname),
+            "INSERT INTO video_jobs (job_id, mode, voice_lang, status, video_url, served_by_vm) VALUES (%s, %s, %s, %s, %s, %s)",
+            (job_id, execution_mode, clean_lang, "processing", out_path, hostname),
         )
         conn.commit()
         cur.close()
@@ -247,8 +288,9 @@ async def generate_video(
             "served_by_vm": hostname,
         }
 
-    if not WORKFLOW_TEMPLATE:
-        raise HTTPException(status_code=500, detail="Workflow template missing on server.")
+    template = get_workflow_template()
+    if not template:
+        raise HTTPException(status_code=500, detail="Workflow template missing on server and GCS.")
 
     try:
         from google.cloud import storage
@@ -260,21 +302,12 @@ async def generate_video(
         if img_bytes:
             in_blob = bucket.blob(f"inputs/{job_id}.jpg")
             in_blob.upload_from_string(img_bytes, content_type=image_file.content_type or "image/jpeg")
-            input_image_url = in_blob.generate_signed_url(
-                version="v4", expiration=datetime.timedelta(minutes=30), method="GET"
-            )
+            input_image_url = sign_gcs_url(in_blob, "GET", expiration_minutes=30)
 
-        out_path = f"outputs/{job_id}.mp4"
         out_blob = bucket.blob(out_path)
-        upload_url = out_blob.generate_signed_url(
-            version="v4",
-            expiration=datetime.timedelta(minutes=30),
-            method="PUT",
-            content_type="video/mp4",
-        )
-        final_read_url = f"https://storage.googleapis.com/{GCS_BUCKET_NAME}/{out_path}"
+        upload_url = sign_gcs_url(out_blob, "PUT", expiration_minutes=30, content_type="video/mp4")
 
-        workflow_payload = copy.deepcopy(WORKFLOW_TEMPLATE)
+        workflow_payload = copy.deepcopy(template)
         workflow_payload["320:328"]["inputs"]["value"] = False
         workflow_payload["269"]["inputs"]["image"] = f"input_{job_id}.jpg"
         workflow_payload["320:319"]["inputs"]["value"] = VOICE_PROMPTS[clean_lang]
@@ -285,7 +318,7 @@ async def generate_video(
         workflow_payload["320:277"]["inputs"]["noise_seed"] = 424242
         workflow_payload["75"]["inputs"]["filename_prefix"] = f"video/{job_id}"
 
-        webhook_url = f"{PUBLIC_BASE_URL}/api/webhook?jobId={job_id}&token={WEBHOOK_SECRET}&videoUrl={final_read_url}"
+        webhook_url = f"{PUBLIC_BASE_URL}/api/webhook?jobId={job_id}&token={WEBHOOK_SECRET}"
         resp = requests.post(
             f"https://api.runpod.ai/v2/{GPU_ENDPOINT_ID}/run",
             headers={"Authorization": f"Bearer {GPU_API_KEY}", "Content-Type": "application/json"},
@@ -295,7 +328,7 @@ async def generate_video(
                     "image_url": input_image_url,
                     "image_name": f"input_{job_id}.jpg",
                     "upload_url": upload_url,
-                    "public_url": final_read_url,
+                    "public_url": out_path,
                 },
                 "webhook": webhook_url,
             },
@@ -321,7 +354,7 @@ async def generate_video(
 
 
 @app.post("/api/webhook")
-async def worker_webhook(request: Request, jobId: str, token: str = "", videoUrl: str = ""):
+async def worker_webhook(request: Request, jobId: str, token: str = ""):
     if token != WEBHOOK_SECRET:
         logger.warning("Rejected unauthorized webhook call", extra={"job_id": jobId, "event": "webhook_unauthorized"})
         raise HTTPException(status_code=403, detail="Invalid webhook token.")
@@ -333,8 +366,8 @@ async def worker_webhook(request: Request, jobId: str, token: str = "", videoUrl
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
-        "UPDATE video_jobs SET status = %s, video_url = %s WHERE job_id = %s",
-        (final_status, videoUrl, jobId),
+        "UPDATE video_jobs SET status = %s WHERE job_id = %s",
+        (final_status, jobId),
     )
     conn.commit()
     cur.close()
@@ -357,11 +390,20 @@ def get_job_status(job_id: str):
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Job not found")
+
+    video_url = row[4]
+    if row[3] == "completed" and video_url and video_url.startswith("outputs/") and GCS_BUCKET_NAME:
+        from google.cloud import storage
+
+        client = storage.Client()
+        blob = client.bucket(GCS_BUCKET_NAME).blob(video_url)
+        video_url = sign_gcs_url(blob, "GET", expiration_minutes=60)
+
     return {
         "job_id": row[0],
         "mode": row[1],
         "voice_lang": row[2],
         "status": row[3],
-        "video_url": row[4],
+        "video_url": video_url,
         "served_by_vm": row[5],
     }
