@@ -1,9 +1,9 @@
-# SXSXSXSXX Reserve Static External IP for the Cloud Load Balancer (attached in next step) SXSXSXSXSXSXSX
+# Reserve Static External IP for the Cloud Load Balancer
 resource "google_compute_global_address" "lb_ip" {
   name = "abe-lb-static-ip"
 }
 
-# SXSXSXSXS Dedicated Least-Privilege Service Account for Ops/Monitoring VM XSXSXSXSXSXS
+# Dedicated Least-Privilege Service Account for Ops/Monitoring VM
 resource "google_service_account" "ops_sa" {
   account_id   = "sa-abe-ops"
   display_name = "ABE Ops & Monitoring VM Service Account"
@@ -27,7 +27,7 @@ resource "google_storage_bucket_iam_member" "ops_backup_access" {
   member = "serviceAccount:${google_service_account.ops_sa.email}"
 }
 
-# XSXSXSXS Daily Persistent Disk Snapshot Schedule SXSXSXSXSX
+# Daily Persistent Disk Snapshot Schedule (ACE Exam 3.1)
 resource "google_compute_resource_policy" "daily_snapshot" {
   name   = "abe-daily-snapshot-policy"
   region = var.region
@@ -46,7 +46,7 @@ resource "google_compute_resource_policy" "daily_snapshot" {
   }
 }
 
-# XSXSXSSXSXSXXSXSXSXS 1. OPS & MONITORING VM (Redis + Prometheus + Loki + Grafana + DB Backup) SXSXSXSXSXSXSXSXS
+# ================= 1. OPS & MONITORING VM =================
 resource "google_compute_instance" "ops_vm" {
   name         = "abe-ops-vm"
   machine_type = "e2-small"
@@ -85,7 +85,7 @@ resource "google_compute_instance" "ops_vm" {
     git clone https://github.com/ABESYH/abe-porto-engine.git /opt/abe-porto || (cd /opt/abe-porto && git pull)
     chmod +x /opt/abe-porto/scripts/backup-db.sh
 
-    # XSXSSSXSXSX Prometheus config using GCE Service Discovery to dynamically scrape MIG App VMs XSXSXSXSXSXSXx
+    # Prometheus config using GCE Service Discovery to dynamically scrape MIG App VMs
     cat << 'PROM' > /opt/abe-porto/monitoring/prometheus-gcp.yml
     global:
       scrape_interval: 5s
@@ -149,7 +149,7 @@ resource "google_compute_instance" "ops_vm" {
   depends_on = [google_compute_router_nat.nat, google_sql_database_instance.postgres]
 }
 
-# XsXsXsXsXsXS 2. APP VMs: INSTANCE TEMPLATE & MANAGED INSTANCE GROUP (2 VMs HA) XSXSXSSSXSXSXSXSXSXS
+# ================= 2. APP VMs: INSTANCE TEMPLATE & MANAGED INSTANCE GROUP =================
 resource "google_compute_instance_template" "app_template" {
   name_prefix  = "abe-app-tmpl-"
   machine_type = "e2-small"

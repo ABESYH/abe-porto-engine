@@ -117,7 +117,7 @@ resource "google_storage_bucket_iam_member" "cicd_web_access" {
 
 resource "google_project_iam_member" "cicd_compute_admin" {
   project = var.project_id
-  role    = "roles/compute.instanceAdmin.v1"
+  role    = "roles/compute.admin"
   member  = "serviceAccount:${google_service_account.cicd_sa.email}"
 }
 
