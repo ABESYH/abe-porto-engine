@@ -7,58 +7,58 @@ on:
     paths:
       - 'backend/**'
       - 'frontend/**'
-      - '.github/workflows/**'
+      - '.github/workflows/deploy.yml'
 
-# @@@@@@ Minimal permissions required to request OIDC token from GitHub @@@@@@@@@@
 permissions:
   contents: 'read'
   id-token: 'write'
 
 jobs:
   deploy:
-    name: Build, Push & Rolling Deploy
+    name: Build, Version & Rolling Deploy
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # @@@@@ 1. Authenticate to GCP using Workload Identity Federation - No JSON Keys! @@@@@@@@@@
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: 'projects/1040668556711/locations/global/workloadIdentityPools/github-actions-pool/providers/github-oidc-provider'
           service_account: 'sa-abe-github-cicd@gcp-ace-501516.iam.gserviceaccount.com'
 
-      # @@@@@@@@ 2. Set up Google Cloud SDK @@@@@@@@@
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: 'gcp-ace-501516'
 
-      # @@@@@@@@ 3. Configure Docker to authenticate with Artifact Registry Jakarta @@@@@@@@@
       - name: Configure Docker for Artifact Registry
         run: |
           gcloud auth configure-docker asia-southeast2-docker.pkg.dev --quiet
 
-      # @@@@@ 4. Build and Push Backend Docker Image @@@@@@@@
-      - name: Build and Push Backend Image
+      - name: Build and Tag Backend Image (Semantic Versioning)
         run: |
           IMAGE_URI="asia-southeast2-docker.pkg.dev/gcp-ace-501516/abe-porto-repo/abe-backend"
+          VERSION_TAG="v1.0.${{ github.run_number }}"
+          
+          echo "Building version: $VERSION_TAG (Commit: ${{ github.sha }})"
+          
           docker build \
             -t "${IMAGE_URI}:${{ github.sha }}" \
-            -t "${IMAGE_URI}:v1.0.0" \
+            -t "${IMAGE_URI}:${VERSION_TAG}" \
+            -t "${IMAGE_URI}:latest" \
             ./backend
+            
           docker push "${IMAGE_URI}:${{ github.sha }}"
-          docker push "${IMAGE_URI}:v1.0.0"
+          docker push "${IMAGE_URI}:${VERSION_TAG}"
+          docker push "${IMAGE_URI}:latest"
 
-      # @@@@@ 5. Deploy Frontend Web Assets to GCS Bucket @@@@@@@@@
       - name: Deploy Frontend to GCS Web Bucket
         run: |
           gcloud storage cp ./frontend/index.html gs://abe-porto-web-501516/index.html
 
-      # @@@@@ 6. Trigger Zero-Downtime Rolling Restart on App MIG @@@@@@@@@
-      - name: Rolling Deploy to Managed Instance Group
+      - name: Trigger Zero-Downtime Rolling Restart on App MIG
         run: |
           gcloud compute instance-groups managed rolling-action restart abe-app-mig \
             --region=asia-southeast2

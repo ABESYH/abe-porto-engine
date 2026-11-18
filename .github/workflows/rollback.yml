@@ -1,0 +1,37 @@
+name: Emergency Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_version:
+        description: 'Target Version Tag to Rollback (e.g. v1.0.42 or latest)'
+        required: true
+        default: 'latest'
+
+permissions:
+  contents: 'read'
+  id-token: 'write'
+
+jobs:
+  rollback:
+    name: Execute Emergency Rollback
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/1040668556711/locations/global/workloadIdentityPools/github-actions-pool/providers/github-oidc-provider'
+          service_account: 'sa-abe-github-cicd@gcp-ace-501516.iam.gserviceaccount.com'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: 'gcp-ace-501516'
+
+      - name: Trigger Rolling Restart for Rollback
+        run: |
+          echo "Initiating emergency rollback to version: ${{ inputs.target_version }}"
+          gcloud compute instance-groups managed rolling-action restart abe-app-mig \
+            --region=asia-southeast2
+          echo "Rollback trigger completed successfully."

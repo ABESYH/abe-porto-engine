@@ -133,6 +133,31 @@ resource "google_project_iam_member" "cicd_sa_user" {
   member  = "serviceAccount:${google_service_account.cicd_sa.email}"
 }
 
+# Allow CI/CD to run read-only `terraform plan` against live state on Pull Requests
+resource "google_project_iam_member" "cicd_viewer" {
+  project = var.project_id
+  role    = "roles/viewer"
+  member  = "serviceAccount:${google_service_account.cicd_sa.email}"
+}
+
+resource "google_project_iam_member" "cicd_security_reviewer" {
+  project = var.project_id
+  role    = "roles/iam.securityReviewer"
+  member  = "serviceAccount:${google_service_account.cicd_sa.email}"
+}
+
+resource "google_storage_bucket_iam_member" "cicd_tfstate_access" {
+  bucket = "abe-porto-tfstate-501516"
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.cicd_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "cicd_db_secret_read" {
+  secret_id = google_secret_manager_secret.app_secrets["abe-db-password"].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cicd_sa.email}"
+}
+
 output "workload_identity_provider" {
   value = google_iam_workload_identity_pool_provider.github_provider.name
 }

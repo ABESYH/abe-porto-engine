@@ -1,0 +1,67 @@
+name: CI - Test & Validate
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: 'read'
+  id-token: 'write'
+
+jobs:
+  test-python:
+    name: Run Python Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest fastapi httpx
+
+      - name: Run Pytest
+        run: |
+          cd backend
+          pytest test_main.py
+
+  validate-terraform:
+    name: Validate & Plan Terraform
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/1040668556711/locations/global/workloadIdentityPools/github-actions-pool/providers/github-oidc-provider'
+          service_account: 'sa-abe-github-cicd@gcp-ace-501516.iam.gserviceaccount.com'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.8'
+
+      - name: Terraform Init & Validate
+        run: |
+          cd terraform
+          terraform init -backend=false
+          terraform validate
+
+      - name: Terraform Plan (Dry-Run against live state)
+        run: |
+          cd terraform
+          terraform init
+          terraform plan -no-color
