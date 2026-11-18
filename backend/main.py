@@ -343,7 +343,7 @@ async def generate_video(
             "served_by_vm": hostname,
         }
     except Exception as exc:
-        logger.error(f"GPU dispatch error: {exc}", extra={"job_id": job_id, "event": "gpu_dispatch_failed"})
+        logger.error(f"GPU dispatch error: {exc}", extra={"job_id": job_id, "event": "gpu_engine_dispatch_failed"})
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("UPDATE video_jobs SET status = %s WHERE job_id = %s", ("failed", job_id))
