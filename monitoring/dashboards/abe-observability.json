@@ -1,0 +1,74 @@
+{
+  "id": null,
+  "uid": "abe-observability",
+  "title": "ABE PORTO — Cloud & API Observability",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total API Requests",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(http_requests_total{handler!=\"/metrics\"}) or vector(0)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "purple", "value": null }] } } }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "API Errors (4xx / 5xx)",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(http_requests_total{status=~\"4..|5..\"}) or vector(0)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } } }
+    },
+    {
+      "id": 3,
+      "type": "gauge",
+      "title": "Host CPU Usage (%)",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "min": 0, "max": 100, "unit": "percent", "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }] } } }
+    },
+    {
+      "id": 4,
+      "type": "gauge",
+      "title": "Host RAM Usage (%)",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))", "refId": "A" }],
+      "fieldConfig": { "defaults": { "min": 0, "max": 100, "unit": "percent", "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 75 }, { "color": "red", "value": 90 }] } } }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "API Request Rate (req/sec by Endpoint & Status)",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum by (handler, status) (rate(http_requests_total{handler!=\"/metrics\"}[1m]))", "legendFormat": "{{handler}} [{{status}}]", "refId": "A" }]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Average API Latency (ms)",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "1000 * (sum(rate(http_request_duration_seconds_sum{handler!=\"/metrics\"}[1m])) / sum(rate(http_request_duration_seconds_count{handler!=\"/metrics\"}[1m])))", "legendFormat": "Avg Latency (ms)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
+    },
+    {
+      "id": 7,
+      "type": "logs",
+      "title": "Live Backend Structured JSON Logs (Fluent Bit + Loki)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 11 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "{job=\"abe-docker\"} |= \"abe-backend\" != \"caller=\" | json | line_format \"{{.log}}\"", "refId": "A" }],
+      "options": { "showTime": true, "prettifyLogMessage": true, "wrapLogMessage": true, "enableLogDetails": true }
+    }
+  ]
+}

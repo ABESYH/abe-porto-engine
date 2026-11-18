@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ABE PORTO — Cloud & AI Infrastructure</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html {
+      scroll-behavior: smooth;
+    }
+    body {
+      background-color: #040407;
+    }
+    .blueprint-grid {
+      background-size: 38px 38px;
+      background-image:
+        linear-gradient(to right, rgba(139, 92, 246, 0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(139, 92, 246, 0.08) 1px, transparent 1px);
+    }
+    .glass-surface {
+      background: linear-gradient(145deg, rgba(18, 14, 28, 0.75), rgba(8, 7, 13, 0.88));
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.78);
+    }
+    .control-plane-surface {
+      background: linear-gradient(160deg, rgba(11, 13, 24, 0.86), rgba(6, 7, 14, 0.94));
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(56, 189, 248, 0.16);
+      box-shadow: 0 24px 90px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(56, 189, 248, 0.1);
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .node-active {
+      background: linear-gradient(145deg, rgba(109, 40, 217, 0.28), rgba(20, 12, 36, 0.92));
+      border-color: rgba(167, 139, 250, 0.7);
+      box-shadow: 0 0 32px rgba(124, 58, 237, 0.25);
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body class="text-zinc-100 min-h-screen flex flex-col justify-between relative overflow-x-hidden font-sans antialiased selection:bg-violet-600/40 selection:text-white">
+
+  <div class="fixed inset-0 pointer-events-none overflow-hidden -z-20">
+    <div class="absolute -top-48 left-1/4 w-[36rem] h-[36rem] bg-violet-900/20 rounded-full blur-[160px]"></div>
+    <div class="absolute bottom-0 right-1/4 w-[30rem] h-[30rem] bg-purple-950/30 rounded-full blur-[150px]"></div>
+  </div>
+
+  <div id="blueprintOverlay" class="fixed inset-0 blueprint-grid pointer-events-none -z-10 opacity-0 transition-opacity duration-700"></div>
+
+  <div id="transitionOverlay" class="hidden fixed inset-0 z-50 bg-[#040407]/95 backdrop-blur-xl flex flex-col items-center justify-center gap-4 px-6 text-center">
+    <div class="w-10 h-10 rounded-full border-2 border-violet-500/30 border-t-violet-400 animate-spin"></div>
+    <div id="transitionText" class="text-xs sm:text-sm font-mono tracking-widest uppercase text-violet-300"></div>
+  </div>
+
+  <!-- Sticky Floating Controls -->
+  <div class="sticky top-0 z-30 px-4 sm:px-5 pt-4 pb-5 bg-gradient-to-b from-[#040407] via-[#040407]/85 to-transparent pointer-events-none">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-2">
+      <div class="pointer-events-auto flex items-center p-1 rounded-full glass-surface text-[11px] font-mono shrink-0">
+        <button onclick="setLanguage('id')" id="lang-id" class="lang-btn px-2.5 py-1 rounded-full transition">ID</button>
+        <button onclick="setLanguage('en')" id="lang-en" class="lang-btn px-2.5 py-1 rounded-full transition">EN</button>
+        <button onclick="setLanguage('zh')" id="lang-zh" class="lang-btn px-2.5 py-1 rounded-full transition">中文</button>
+      </div>
+
+      <div id="layerIndicator" class="hidden">
+        <span id="layerDot" class="w-2 h-2 rounded-full bg-violet-400"></span>
+        <span id="layerText" class="text-zinc-200">FRONTEND APPLICATION</span>
+      </div>
+
+      <div id="apiStatusPill" class="pointer-events-auto flex items-center gap-2 px-3 py-2 rounded-full glass-surface text-[11px] sm:text-xs font-mono tracking-tight max-w-[175px] sm:max-w-none">
+        <span id="apiStatusDot" class="w-2 h-2 rounded-full bg-zinc-500 shrink-0"></span>
+        <span id="apiStatusText" class="text-zinc-400 truncate">Checking API...</span>
+      </div>
+    </div>
+  </div>
+
+  <main class="max-w-5xl w-full mx-auto px-4 sm:px-6 py-4 flex-grow flex items-center justify-center">
+
+    <!-- SCREEN 1: HERO + PROFILE & CTA -->
+    <section id="screen-1" class="w-full space-y-20 sm:space-y-24 pb-12">
+
+      <div class="min-h-[70vh] flex items-center">
+        <div class="w-full grid grid-cols-1 md:grid-cols-[1.35fr_0.65fr] gap-10 items-center">
+
+          <div class="space-y-6 text-left">
+            <div class="space-y-2.5">
+              <h1 class="text-5xl sm:text-7xl font-extrabold tracking-tight text-white leading-[1.05]">
+                ABE <span class="bg-gradient-to-r from-violet-400 via-purple-300 to-indigo-400 bg-clip-text text-transparent">PORTO</span>
+              </h1>
+              <p class="text-sm sm:text-base text-zinc-180 font-medium" data-i18n="heroSub">
+                Cloud Engineering • Containerization • AI Infrastructure • CI/CD & Observability
+              </p>
+            </div>
+
+            <p class="text-sm sm:text-base text-zinc-400 max-w-xl leading-relaxed" data-i18n="heroDesc">
+              Portofolio interaktif cloud-native yang berjalan di atas infrastruktur high-availability GCP. Uji langsung alur AI video engine di bawah dan lihat arsitektur di balik layarnya.
+            </p>
+
+            <div class="flex flex-wrap items-center gap-3 sm:gap-4 pt-1">
+              <button onclick="scrollToProfile()" class="px-6 sm:px-7 py-3.5 rounded-2xl glass-card hover:bg-white/[0.06] hover:border-violet-500/40 font-semibold text-sm tracking-wide text-zinc-200 transition" data-i18n="contactAbeBtn">
+                Contact Abe ↓
+              </button>
+              <button onclick="goToScreen(2)" class="group inline-flex items-center gap-3 px-7 sm:px-8 py-3.5 rounded-2xl bg-gradient-to-r from-violet-700 via-purple-700 to-indigo-700 hover:from-violet-600 hover:to-indigo-600 border border-white/15 font-semibold text-sm tracking-wider uppercase text-white shadow-[0_10px_40px_rgba(109,40,217,0.38)] transition-all duration-300 hover:-translate-y-0.5">
+                <span data-i18n="startBtn">Start Engine</span>
+                <span class="transition-transform group-hover:translate-x-1">→</span>
+              </button>
+            </div>
+
+            <div class="pt-5 grid grid-cols-3 gap-3 sm:gap-4 max-w-lg border-t border-white/[0.06]">
+              <div>
+                <div class="text-base sm:text-xl font-bold text-white">3.5+ Yrs</div>
+                <div class="text-[10px] sm:text-[11px] font-mono text-zinc-500" data-i18n="stat1">SaaS Production</div>
+              </div>
+              <div>
+                <div class="text-base sm:text-xl font-bold text-white">3 Projects</div>
+                <div class="text-[10px] sm:text-[11px] font-mono text-zinc-500" data-i18n="stat2">Live Apps</div>
+              </div>
+              <div>
+                <div class="text-base sm:text-xl font-bold text-violet-300">GCP + IaC</div>
+                <div class="text-[10px] sm:text-[11px] font-mono text-zinc-500" data-i18n="stat3">HA & Automation</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-center md:justify-end">
+            <div class="relative w-full max-w-[260px]">
+              <div class="absolute -inset-3 bg-gradient-to-tr from-violet-700/30 via-fuchsia-700/15 to-indigo-700/25 rounded-[2rem] blur-2xl"></div>
+              <div class="relative glass-surface rounded-[2rem] p-3">
+                <div class="aspect-[4/5] rounded-[1.4rem] overflow-hidden bg-zinc-900 border border-white/10 relative">
+                  <img src="https://media.licdn.com/dms/image/v2/D5603AQFPp_59h3wPIA/profile-displayphoto-shrink_800_800/B56ZZ5LwbqHgAs-/0/1745789847819?e=1796860800&v=beta&t=K10pAkipHF4mf79N2xObTOFilys1KUDRzXWw-YhSz5Y" alt="Abe" class="w-full h-full object-cover">
+                  <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent p-4">
+                    <div class="text-[10px] font-mono text-violet-300 uppercase tracking-widest">Cloud Engineer</div>
+                    <div class="text-base font-bold text-white">ABE</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div id="profileSection" class="scroll-mt-24 space-y-8">
+        <div class="glass-surface rounded-3xl p-5 sm:p-10 space-y-6">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.06] pb-6">
+            <div class="space-y-2">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card text-[11px] font-mono tracking-widest uppercase text-violet-300">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span data-i18n="profTag">ABE // CLOUD & AI INFRASTRUCTURE</span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight" data-i18n="profTitle">Builder Mindset, Cloud Execution</h2>
+            </div>
+            <div class="flex flex-wrap gap-2 text-[11px] font-mono">
+              <span class="px-3 py-1 rounded-full bg-violet-950/60 border border-violet-500/25 text-violet-200">GCP Infrastructure</span>
+              <span class="px-3 py-1 rounded-full bg-violet-950/60 border border-violet-500/25 text-violet-200">Terraform</span>
+              <span class="px-3 py-1 rounded-full bg-violet-950/60 border border-violet-500/25 text-violet-200">Docker & CI/CD</span>
+              <span class="px-3 py-1 rounded-full bg-violet-950/60 border border-violet-500/25 text-violet-200">Observability</span>
+            </div>
+          </div>
+
+          <p class="text-sm sm:text-base text-zinc-300 leading-relaxed max-w-3xl" data-i18n="profBio">
+            Saya Abe, builder dengan pengalaman 3,5+ tahun merancang, mendeploy, dan mengoperasikan produk SaaS dengan real users secara mandiri. Kini saya memfokuskan pengalaman cloud operations, AI container orchestration, dan infrastructure automation tersebut untuk berkontribusi sebagai Cloud Engineer di tim teknis profesional.
+          </p>
+
+          <div class="space-y-3 pt-2">
+            <div class="text-[11px] font-mono uppercase tracking-widest text-zinc-500" data-i18n="projHeader">Production Track Record (3.5+ Tahun SaaS Operations)</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              <div class="glass-card rounded-2xl p-5 space-y-3 hover:border-violet-500/40 transition">
+                <div class="flex items-center gap-3.5">
+                  <div class="w-12 h-12 rounded-xl bg-violet-950/60 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                    <img src="https://media.licdn.com/dms/image/v2/D560BAQE_UiPq8F930g/company-logo_100_100/B56aHtyqfTH0AI-/0/1794990844131/geneta_ai_studio_logo?e=1796860800&v=beta&t=If1Xo3SbXwdqM1a5WQ8Hsl9ird9ElUD_Ri4kf8GVXhM" alt="Geneta AI Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover">
+                    <span class="hidden w-full h-full items-center justify-center text-xs font-mono font-bold text-violet-300">GAI</span>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-white text-base">Geneta AI</h3>
+                    <div class="text-[11px] font-mono text-zinc-500">2026 — Present</div>
+                  </div>
+                </div>
+                <p class="text-xs text-zinc-400 leading-relaxed" data-i18n="projGeneta">
+                  Platform AI image & video generation. Mengelola custom container model open-source via Self-Hosted GitHub Runner di VM GCP, Persistent Disk, Docker Registry, dan Serverless GPU.
+                </p>
+              </div>
+
+              <div class="glass-card rounded-2xl p-5 space-y-3 hover:border-violet-500/40 transition">
+                <div class="flex items-center gap-3.5">
+                  <div class="w-12 h-12 rounded-xl bg-indigo-950/60 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                    <img src="https://media.licdn.com/dms/image/v2/D4E0BAQF9zWLDRrusDA/company-logo_100_100/B4EaBJKcy4G4AI-/0/1787933871505?e=1796860800&v=beta&t=6DgYOdGMJnj24fh0Aj9t4STCy5VpB3gjWJtux7mXjRc" alt="Locus AI Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover">
+                    <span class="hidden w-full h-full items-center justify-center text-xs font-mono font-bold text-indigo-300">LOC</span>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-white text-base">Locus AI</h3>
+                    <div class="text-[11px] font-mono text-zinc-500">2025 — 2026</div>
+                  </div>
+                </div>
+                <p class="text-xs text-zinc-400 leading-relaxed" data-i18n="projLocus">
+                  Aplikasi AI Life Mentorship. Menghandle arsitektur backend cloud, user storage management, integrasi AI API, serta kestabilan layanan production.
+                </p>
+              </div>
+
+              <div class="glass-card rounded-2xl p-5 space-y-3 hover:border-violet-500/40 transition">
+                <div class="flex items-center gap-3.5">
+                  <div class="w-12 h-12 rounded-xl bg-fuchsia-950/50 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                    <img src="https://media.licdn.com/dms/image/v2/D560BAQHXZDXQP-XnlQ/company-logo_100_100/company-logo_100_100/0/1735053421915/impctfy_logo?e=1796860800&v=beta&t=3wgjlgcJIZ4x0RvWYpdHg-ETh7OtgsONmbOf3qzFDsc" alt="Impctfy Logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-full object-cover">
+                    <span class="hidden w-full h-full items-center justify-center text-xs font-mono font-bold text-fuchsia-300">IMP</span>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-white text-base">Impctfy</h3>
+                    <div class="text-[11px] font-mono text-zinc-500">2024 — 2025</div>
+                  </div>
+                </div>
+                <p class="text-xs text-zinc-400 leading-relaxed" data-i18n="projImpctfy">
+                  Platform social SaaS dengan real user traffic. Bertanggung jawab penuh atas arsitektur aplikasi, database, cloud storage, dan cloud functions dari nol sampai rilis.
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="pt-6 border-t border-white/[0.06] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div class="text-sm font-bold text-white" data-i18n="ctaTitle">Tertarik diskusi atau menjadwalkan interview?</div>
+              <div class="text-xs text-zinc-400 mt-0.5" data-i18n="ctaSub">Open untuk posisi Cloud Engineer & Cloud Operations.</div>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <a href="mailto:sr.abesyh@gmail.com" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-700 to-indigo-700 hover:from-violet-600 hover:to-indigo-600 border border-white/15 text-xs font-semibold text-white shadow-lg transition">
+                <span data-i18n="emailBtn">Email Abe</span>
+                <span>↗</span>
+              </a>
+              <a id="linkedinLink" href="https://linkedin.com/in/aabbee" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl glass-card hover:border-violet-500/50 text-xs font-mono text-zinc-200 transition">
+                <span>LinkedIn</span>
+                <span>↗</span>
+              </a>
+              <a id="githubProfileLink" href="https://github.com/ABESYH" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl glass-card hover:border-violet-500/50 text-xs font-mono text-zinc-200 transition">
+                <span>GitHub</span>
+                <span>↗</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 2: FRONTEND APP INPUT -->
+    <section id="screen-2" class="hidden w-full max-w-4xl glass-surface rounded-3xl p-5 sm:p-10 space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-[1.35fr_0.65fr] gap-8 items-center">
+        
+        <div class="space-y-5">
+          <div>
+            <span class="text-[11px] font-mono uppercase tracking-widest text-violet-400" data-i18n="s2Tag">01 / Frontend Application</span>
+            <h2 class="text-2xl sm:text-3xl font-bold mt-1 text-white tracking-tight" data-i18n="s2Title">Pilih Avatar atau Upload Foto</h2>
+            <p class="text-sm text-zinc-400 mt-1.5 leading-relaxed" data-i18n="s2Desc">
+              Setiap avatar mewakili bahasa suara video AI. Hasil generate terkunci pada rasio vertikal 9:16.
+            </p>
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-[11px] font-mono uppercase tracking-wider text-zinc-400" data-i18n="s2OptA">Pilih Avatar AI (Bahasa Suara)</label>
+            <div class="grid grid-cols-3 gap-2 sm:gap-2.5">
+              <button type="button" id="avatar-btn-id" onclick="selectAvatar('id', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=540&h=960&fit=crop', this)" class="preset-btn glass-card hover:border-violet-500/50 p-2 sm:p-2.5 rounded-2xl flex flex-col items-center gap-1.5 sm:gap-2 text-center transition">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=180&h=320&fit=crop" class="w-11 h-14 sm:w-12 sm:h-16 rounded-xl object-cover">
+                <div>
+                  <div class="text-[11px] sm:text-xs font-semibold text-zinc-100">Avatar A</div>
+                  <div class="text-[9px] sm:text-[10px] font-mono text-violet-300">Indonesia</div>
+                </div>
+              </button>
+              <button type="button" id="avatar-btn-en" onclick="selectAvatar('en', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=540&h=960&fit=crop', this)" class="preset-btn glass-card hover:border-violet-500/50 p-2 sm:p-2.5 rounded-2xl flex flex-col items-center gap-1.5 sm:gap-2 text-center transition">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=180&h=320&fit=crop" class="w-11 h-14 sm:w-12 sm:h-16 rounded-xl object-cover">
+                <div>
+                  <div class="text-[11px] sm:text-xs font-semibold text-zinc-100">Avatar B</div>
+                  <div class="text-[9px] sm:text-[10px] font-mono text-violet-300">English</div>
+                </div>
+              </button>
+              <button type="button" id="avatar-btn-zh" onclick="selectAvatar('zh', 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=540&h=960&fit=crop', this)" class="preset-btn glass-card hover:border-violet-500/50 p-2 sm:p-2.5 rounded-2xl flex flex-col items-center gap-1.5 sm:gap-2 text-center transition">
+                <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=180&h=320&fit=crop" class="w-11 h-14 sm:w-12 sm:h-16 rounded-xl object-cover">
+                <div>
+                  <div class="text-[11px] sm:text-xs font-semibold text-zinc-100">Avatar C</div>
+                  <div class="text-[9px] sm:text-[10px] font-mono text-violet-300">中文 (ZH)</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="block text-[11px] font-mono uppercase tracking-wider text-zinc-400" data-i18n="s2OptB">Atau Upload Foto Sendiri (9:16 — Default Voice: English)</label>
+            <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" onchange="handleFileUpload(event)" class="w-full text-xs text-zinc-400 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:bg-violet-900/40 file:text-violet-200 hover:file:bg-violet-800/50 file:font-medium glass-card rounded-2xl p-2 cursor-pointer">
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="block text-[11px] font-mono uppercase tracking-wider text-zinc-400" data-i18n="s2PassLabel">GPU Access Passcode (Opsional)</label>
+            <input type="password" id="passcodeInput" placeholder="Kosongkan untuk Mode Simulasi Cloud" class="w-full bg-black/50 border border-white/10 rounded-2xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500/70 transition">
+            <p class="text-[11px] text-zinc-500 leading-relaxed" data-i18n="s2PassHint">
+              FinOps Guard: Worker GPU hanya aktif dengan passcode valid. Tanpa passcode, tetap berjalan dalam mode simulasi.
+            </p>
+          </div>
+
+          <div id="formErrorBox" class="hidden rounded-xl bg-rose-500/15 border border-rose-500/30 px-4 py-2.5 text-xs text-rose-300 font-mono"></div>
+        </div>
+
+        <div class="flex flex-col items-center justify-center">
+          <div class="w-full max-w-[235px] aspect-[9/16] rounded-3xl overflow-hidden border border-white/15 bg-black/60 relative shadow-2xl">
+            <img id="previewImg" src="" alt="9:16 Preview" class="w-full h-full object-cover">
+            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-4 flex items-center justify-between">
+              <span class="text-[10px] font-mono text-zinc-300 uppercase">9:16 Portrait</span>
+              <span id="previewVoiceBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-md bg-violet-600/80 text-white">VOICE: ID</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="flex justify-between items-center pt-5 border-t border-white/[0.06]">
+        <button onclick="goToScreen(1)" class="px-4 py-2.5 text-zinc-400 hover:text-white text-sm font-medium transition" data-i18n="backBtn">← Kembali</button>
+        <button id="generateBtn" onclick="startGeneration()" class="px-6 sm:px-8 py-3.5 bg-gradient-to-r from-violet-700 to-indigo-700 hover:from-violet-600 hover:to-indigo-600 border border-white/15 rounded-2xl font-semibold text-sm text-white shadow-lg shadow-violet-900/30 transition" data-i18n="genBtn">
+          Generate Video
+        </button>
+      </div>
+    </section>
+
+    <!-- SCREEN 3: BEHIND THE SCENES -->
+    <section id="screen-3" class="hidden w-full control-plane-surface rounded-3xl p-5 sm:p-10 space-y-7">
+      <div class="flex flex-wrap justify-between items-center gap-3 bg-black/55 border border-cyan-500/20 px-4 py-3 rounded-2xl text-xs font-mono">
+        <div class="flex flex-wrap items-center gap-3 sm:gap-4 text-zinc-400">
+          <span class="text-cyan-400 font-semibold">[X-RAY]</span>
+          <span>JOB: <b id="liveJobId" class="text-violet-300">-</b></span>
+          <span>NODE: <b id="liveVm" class="text-zinc-200">-</b></span>
+        </div>
+        <div id="liveRenderStatus" class="px-3 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/20">
+          Processing...
+        </div>
+      </div>
+
+      <div class="flex flex-wrap justify-between items-end gap-3">
+        <div>
+          <span class="text-[11px] font-mono uppercase tracking-widest text-cyan-400" data-i18n="s3Tag">02 / Behind The Scenes — Cloud Infrastructure</span>
+          <h2 class="text-xl sm:text-2xl font-bold text-white tracking-tight mt-1" data-i18n="s3Title">Di Balik Layar — System Architecture</h2>
+          <p class="text-xs text-zinc-400 mt-0.5" data-i18n="s3Desc">Anda sekarang masuk ke control room backend. Alur berjalan otomatis—klik komponen mana saja untuk melihat engine dan artifact proof-nya.</p>
+        </div>
+        <button id="resumeTourBtn" onclick="resumeAutoTour()" class="hidden text-xs font-mono px-3.5 py-1.5 rounded-xl bg-violet-900/40 hover:bg-violet-800/50 border border-violet-500/40 text-violet-200 transition" data-i18n="resumeBtn">
+          Resume Auto-Play
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <div class="text-[10px] font-mono uppercase tracking-widest text-zinc-500" data-i18n="runtimeLabel">Runtime Request Flow</div>
+        <div id="runtimePipeline" class="flex flex-col md:grid md:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] items-stretch gap-2"></div>
+      </div>
+
+      <div class="space-y-2">
+        <div class="text-[10px] font-mono uppercase tracking-widest text-zinc-500" data-i18n="devopsLabel">Infrastructure, Security, DevOps, Observability & DR Layer</div>
+        <div id="devopsFoundation" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 items-stretch gap-3"></div>
+      </div>
+
+      <div id="pipelineDetailCard" class="bg-black/60 border border-white/[0.08] rounded-2xl p-5 sm:p-6 min-h-[210px] flex flex-col justify-between gap-4 transition-all"></div>
+
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-3 border-t border-white/[0.06]">
+        <div class="flex items-center gap-4">
+          <button onclick="goToScreen(2)" class="text-xs text-zinc-400 hover:text-zinc-200 transition" data-i18n="changeInputBtn">← Kembali ke Input App</button>
+          <a href="/grafana/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs font-mono text-cyan-300 hover:text-cyan-200 transition">
+            <span data-i18n="liveGrafanaLink">Live Grafana Metrics & Logs</span>
+            <span>↗</span>
+          </a>
+        </div>
+        <button id="completeBtn" onclick="transitionToScreen(4, 'toFrontend')" class="w-full sm:w-auto px-7 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 text-sm font-bold shadow-lg shadow-emerald-900/20 transition" data-i18n="completeBtn">
+          Complete & Kembali ke App →
+        </button>
+      </div>
+    </section>
+
+    <!-- SCREEN 4: OUTPUT -->
+    <section id="screen-4" class="hidden w-full max-w-3xl glass-surface rounded-3xl p-5 sm:p-10 space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-8 items-center">
+        
+        <div class="w-full max-w-[240px] mx-auto aspect-[9/16] bg-black rounded-3xl overflow-hidden border border-white/15 shadow-2xl">
+          <video id="resultVideo" controls playsinline preload="metadata" class="w-full h-full object-contain bg-black"></video>
+        </div>
+
+        <div class="space-y-5 text-left">
+          <div>
+            <span class="text-[11px] font-mono uppercase tracking-widest text-emerald-400" data-i18n="s4Tag">03 / Video Ready</span>
+            <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight mt-1" data-i18n="s4Title">Video Anda Sudah Siap</h2>
+            <p class="text-sm text-zinc-400 mt-1" data-i18n="s4Desc">Video selesai di-render oleh backend cloud dan sudah dikirim kembali ke layar user.</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div class="glass-card rounded-2xl p-3.5">
+              <div class="text-zinc-500 font-mono text-[10px]" data-i18n="specEngine">AI ENGINE</div>
+              <div class="text-zinc-100 font-semibold mt-0.5">I2V Video Engine</div>
+            </div>
+            <div class="glass-card rounded-2xl p-3.5">
+              <div class="text-zinc-500 font-mono text-[10px]" data-i18n="specDuration">DURATION</div>
+              <div class="text-zinc-100 font-semibold mt-0.5">5 Seconds</div>
+            </div>
+            <div class="glass-card rounded-2xl p-3.5">
+              <div class="text-zinc-500 font-mono text-[10px]" data-i18n="specRatio">ASPECT RATIO</div>
+              <div class="text-zinc-100 font-semibold mt-0.5">9:16 Vertical</div>
+            </div>
+            <div class="glass-card rounded-2xl p-3.5">
+              <div class="text-zinc-500 font-mono text-[10px]" data-i18n="specVoice">VOICE LANGUAGE</div>
+              <div id="finalVoiceLang" class="text-violet-300 font-semibold mt-0.5">Indonesia (ID)</div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-3 pt-1">
+            <a id="downloadBtn" href="#" download="abeporto-video.mp4" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-violet-700 to-indigo-700 hover:from-violet-600 hover:to-indigo-600 border border-white/15 text-xs sm:text-sm font-semibold text-white shadow-lg transition" data-i18n="downloadBtn">
+              Download Video ↓
+            </a>
+            <button onclick="goToScreen(2)" class="px-5 py-3 glass-card hover:bg-white/[0.06] rounded-2xl text-xs sm:text-sm font-medium text-zinc-200 transition" data-i18n="retryBtn">
+              Buat Lagi
+            </button>
+            <button onclick="goToProfileFromOutput()" class="px-5 py-3 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-xs sm:text-sm font-semibold text-emerald-300 transition" data-i18n="contactAbeCta">
+              Contact Abe →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-4 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-zinc-500">
+        <div class="flex items-center gap-4">
+          <button onclick="transitionToScreen(3, 'toBackend')" class="text-zinc-400 hover:text-white transition" data-i18n="backDiagramBtn">← Lihat Arsitektur</button>
+          <a href="/grafana/" target="_blank" rel="noopener noreferrer" class="text-violet-300 hover:text-violet-200 transition" data-i18n="inspectGrafanaBtn">Grafana Metrics ↗</a>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <span>Served by VM: <b id="finalVm" class="text-zinc-300">-</b></span>
+          <span>•</span>
+          <span>Mode: <b id="finalMode" class="text-violet-300">-</b></span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="text-center text-[11px] font-mono text-zinc-600 py-5 px-4 border-t border-white/[0.04]">
+    ABE &nbsp;•&nbsp; FastAPI &nbsp;•&nbsp; Docker &nbsp;•&nbsp; Cloud SQL (PostgreSQL) &nbsp;•&nbsp; Redis &nbsp;•&nbsp; Terraform &nbsp;•&nbsp; Prometheus, Fluent Bit & Grafana
+  </footer>
+
+  <script>
+    const GITHUB_PROFILE = "https://github.com/ABESYH";
+    const GITHUB_REPO = `${GITHUB_PROFILE}/abe-porto-engine`;
+    const LINKEDIN_PROFILE = "https://linkedin.com/in/aabbee";
+
+    document.getElementById('githubProfileLink').href = GITHUB_PROFILE;
+    document.getElementById('linkedinLink').href = LINKEDIN_PROFILE;
+
+    const storedLang = localStorage.getItem('abe_lang');
+    let currentLang = ['id', 'en', 'zh'].includes(storedLang) ? storedLang : 'id';
+    let selectedPresetUrl = "";
+    let selectedVoiceLang = "id";
+    let currentObjectUrl = null;
+    let activeLayer = "runtime";
+    let activeIndex = 0;
+    let tourTimer = null;
+    let pollTimer = null;
+    let currentJobId = null;
+    let isPreviewMode = false;
+    let isTransitioning = false;
+    let isApiOnline = false;
+    let onlineVmName = "";
+
+    const VOICE_LABELS = {
+      id: "Indonesia (ID)",
+      en: "English (EN)",
+      zh: "Mandarin (中文)"
+    };
+
+    const TRANSLATIONS = {
+      id: {
+        layerFrontend: "FRONTEND APPLICATION",
+        layerBackend: "BACKEND INFRASTRUCTURE (X-RAY)",
+        transToBackend: "Mengirim HTTPS Request → Masuk ke Infrastruktur Cloud...",
+        transToFrontend: "Mengirim Video Output → Kembali ke Frontend App...",
+        heroSub: "Cloud Engineering • Containerization • AI Infrastructure • CI/CD & Observability",
+        heroDesc: "Portofolio interaktif cloud-native yang berjalan di atas infrastruktur high-availability GCP. Uji langsung alur AI video engine di bawah dan lihat arsitektur di balik layarnya.",
+        contactAbeBtn: "Contact Abe ↓",
+        startBtn: "Start Engine",
+        stat1: "SaaS Production",
+        stat2: "Live Apps",
+        stat3: "HA & Automation",
+        profTag: "ABE // CLOUD & AI INFRASTRUCTURE",
+        profTitle: "Builder Mindset, Cloud Execution",
+        profBio: "Saya Abe, builder dengan pengalaman 3,5+ tahun merancang, mendeploy, dan mengoperasikan produk SaaS dengan real users secara mandiri. Kini saya memfokuskan pengalaman cloud operations, AI container orchestration, dan infrastructure automation tersebut untuk berkontribusi sebagai Cloud Engineer di tim teknis profesional.",
+        projHeader: "Production Track Record (3.5+ Tahun SaaS Operations)",
+        projGeneta: "Platform AI image & video generation. Mengelola custom container model open-source via Self-Hosted GitHub Runner di VM GCP, Persistent Disk, Docker Registry, dan Serverless GPU.",
+        projLocus: "Aplikasi AI Life Mentorship. Menghandle arsitektur backend cloud, user storage management, integrasi AI API, serta kestabilan layanan production.",
+        projImpctfy: "Platform social SaaS. Bertanggung jawab penuh atas arsitektur aplikasi, database, cloud storage, dan cloud functions dari nol sampai rilis.",
+        ctaTitle: "Tertarik diskusi atau menjadwalkan interview?",
+        ctaSub: "Open untuk posisi Cloud Engineer & Cloud Operations.",
+        emailBtn: "Email Abe",
+        s2Tag: "01 / Frontend Application",
+        s2Title: "Pilih Avatar atau Upload Foto",
+        s2Desc: "Setiap avatar mewakili bahasa suara video AI. Hasil generate terkunci pada rasio vertikal 9:16.",
+        s2OptA: "Pilih Avatar AI (Bahasa Suara)",
+        s2OptB: "Atau Upload Foto Sendiri (9:16 — Default Voice: English)",
+        s2PassLabel: "GPU Access Passcode (Opsional)",
+        s2PassPlaceholder: "Kosongkan untuk Mode Simulasi Cloud",
+        s2PassHint: "FinOps Guard: Worker GPU hanya aktif dengan passcode valid. Tanpa passcode, tetap berjalan dalam mode simulasi.",
+        backBtn: "← Kembali",
+        genBtn: "Generate Video",
+        submittingBtn: "Mengirim...",
+        s3Tag: "02 / Behind The Scenes — Cloud Infrastructure",
+        s3Title: "Di Balik Layar — System Architecture",
+        s3Desc: "Anda sekarang masuk ke control room backend. Alur berjalan otomatis—klik komponen mana saja untuk melihat engine dan artifact proof-nya.",
+        resumeBtn: "Resume Auto-Play",
+        runtimeLabel: "Runtime Request Flow",
+        devopsLabel: "Infrastructure, Security, DevOps, Observability & DR Layer",
+        changeInputBtn: "← Kembali ke Input App",
+        liveGrafanaLink: "Live Grafana Metrics & Logs",
+        completeBtn: "Complete & Kembali ke App →",
+        waitingBtn: "Menunggu Render Selesai...",
+        s4Tag: "03 / Frontend Output",
+        s4Title: "Video Anda Sudah Siap",
+        s4Desc: "Video selesai di-render oleh backend cloud dan sudah dikirim kembali ke layar user.",
+        specEngine: "AI ENGINE",
+        specDuration: "DURATION",
+        specRatio: "ASPECT RATIO",
+        specVoice: "VOICE LANGUAGE",
+        downloadBtn: "Download Video ↓",
+        retryBtn: "Buat Lagi",
+        contactAbeCta: "Contact Abe →",
+        backDiagramBtn: "← Lihat Arsitektur",
+        inspectGrafanaBtn: "Grafana Metrics ↗",
+        proofPrefix: "ARTIFACT PROOF:",
+        viewSource: "View Source di GitHub ↗",
+        apiOnline: "API Online",
+        apiOffline: "API Offline",
+        runtime: [
+          {
+            step: "01",
+            title: "Load Balancer & HA",
+            tag: "NETWORKING, SSL & HIGH AVAILABILITY",
+            engines: ["Cloudflare DNS & WAF", "GCP Cloud Load Balancing", "Google Cloud VPC", "Cloud NAT", "Managed Instance Group (2 VMs)"],
+            desc: "Traffic HTTPS disaring oleh Cloudflare menuju Static IP Cloud Load Balancer (Google-Managed SSL), melakukan health check (/api/health), dan mendistribusikan beban ke 2 Backend VM (Managed Instance Group) di Private Subnet tanpa IP Publik.",
+            proofLabel: "terraform/network.tf",
+            proofUrl: `${GITHUB_REPO}/blob/main/terraform/network.tf`,
+            liveLabel: "Cek Live Health (/api/health)",
+            liveUrl: "/api/health"
+          },
+          {
+            step: "02",
+            title: "Multi-VM Docker & DB",
+            tag: "COMPUTE, STATE & ANTI-TIMEOUT",
+            engines: ["GCP Compute Engine (Ubuntu)", "Docker Engine", "Python FastAPI", "Cloud SQL (PostgreSQL)", "Redis"],
+            desc: "Container FastAPI di dalam VM memvalidasi request, menyimpan transient state di Redis dan job metadata di Cloud SQL (PostgreSQL) via Private IP, lalu langsung merespon < 1 detik agar Load Balancer tidak kena HTTP timeout.",
+            proofLabel: "backend/Dockerfile",
+            proofUrl: `${GITHUB_REPO}/blob/main/backend/Dockerfile`,
+            liveLabel: "Lihat App FastAPI",
+            liveUrl: `${GITHUB_REPO}/blob/main/backend/main.py`
+          },
+          {
+            step: "03",
+            title: "Signed URL & GPU",
+            tag: "STORAGE SECURITY & INFERENCE",
+            engines: ["Google Cloud Storage (GCS)", "IAM v4 Signed URL", "Serverless GPU Worker"],
+            desc: "Backend menerbitkan short-lived GCS v4 Signed URL (untuk baca input & upload output) lalu men-dispatch workflow ke Serverless GPU Worker. Video .mp4 langsung ter-upload dari GPU ke GCS tanpa membebani RAM VM.",
+            proofLabel: "backend/main.py (Signed URL)",
+            proofUrl: `${GITHUB_REPO}/blob/main/backend/main.py`,
+            liveLabel: "Storage Terraform Config",
+            liveUrl: `${GITHUB_REPO}/blob/main/terraform/storage.tf`
+          },
+          {
+            step: "04",
+            title: "Webhook Callback",
+            tag: "ASYNC COMPLETION & TOKEN GUARD",
+            engines: ["FastAPI Webhook", "Webhook Secret Token", "Cloud SQL (PostgreSQL)"],
+            desc: "Setelah render selesai, GPU Worker memanggil /api/webhook melewati Load Balancer sambil membawa secret token pengaman untuk meng-update status job di Cloud SQL menjadi 'completed' agar siap diputar.",
+            proofLabel: "backend/main.py (/api/webhook)",
+            proofUrl: `${GITHUB_REPO}/blob/main/backend/main.py`,
+            liveLabel: null,
+            liveUrl: null
+          }
+        ],
+        devops: [
+          {
+            badge: "IAC / HA",
+            title: "Terraform & MIG",
+            tag: "INFRASTRUCTURE AS CODE",
+            engines: ["Terraform (HCL)", "GCS Remote State", "Instance Template & MIG", "Cloud IAP"],
+            desc: "Seluruh VPC, Private Subnet, Cloud NAT, Cloud SQL, Load Balancer, dan Managed Instance Group (2 VMs) didefinisikan secara deklaratif dengan Terraform. Remote State disimpan di GCS Bucket dan akses SSH hanya lewat Cloud IAP Tunnel.",
+            proofLabel: "terraform/compute.tf",
+            proofUrl: `${GITHUB_REPO}/tree/main/terraform`,
+            liveLabel: null,
+            liveUrl: null
+          },
+          {
+            badge: "IAM / FINOPS",
+            title: "IAM, WIF & FinOps",
+            tag: "IDENTITY, SECURITY & COST CONTROL",
+            engines: ["GCP IAM (Least Privilege)", "Workload Identity Federation", "Secret Manager", "Billing Budget Alerts"],
+            desc: "Zero static JSON keys: VM memakai Attached Service Account dengan izin minimal (Least Privilege), secrets disimpan di Secret Manager, dan biaya dijaga oleh Billing Budget Alerts, GCS Lifecycle, serta Passcode GPU Guard.",
+            proofLabel: "terraform/iam.tf",
+            proofUrl: `${GITHUB_REPO}/blob/main/terraform/iam.tf`,
+            liveLabel: "Bukti Budget Alert",
+            liveUrl: `${GITHUB_REPO}/blob/main/docs/billing-budget-alert.png`
+          },
+          {
+            badge: "CI/CD",
+            title: "GitHub Actions",
+            tag: "AUTOMATED DELIVERY PIPELINE",
+            engines: ["GitHub Actions", "Workload Identity Federation", "GCP Artifact Registry", "Cloud IAP Deploy"],
+            desc: "Push ke branch main memicu GitHub Actions untuk autentikasi ke GCP via Workload Identity Federation (tanpa JSON key), mem-build Docker image ke Artifact Registry, dan menjalankan rolling deploy ke VM privat.",
+            proofLabel: ".github/workflows/deploy.yml",
+            proofUrl: `${GITHUB_REPO}/blob/main/.github/workflows/deploy.yml`,
+            liveLabel: "Riwayat Pipeline (Actions)",
+            liveUrl: `${GITHUB_REPO}/actions`
+          },
+          {
+            badge: "MLOPS / BUILD",
+            title: "Self-Hosted AI Builder",
+            tag: "CUSTOM CONTAINER BAKING PIPELINE",
+            engines: ["GCP Compute Engine VM", "GCP Persistent Disk", "Self-Hosted GitHub Runner", "Docker Hub"],
+            desc: "Model AI berukuran besar di-bake ke dalam custom Docker image memakai Self-Hosted GitHub Actions Runner di atas VM GCP dengan Persistent Disk sebagai build cache, lalu di-push ke Docker Hub untuk ditarik Serverless GPU Worker.",
+            proofLabel: "gpu-worker/Dockerfile",
+            proofUrl: `${GITHUB_REPO}/tree/main/gpu-worker`,
+            liveLabel: "Runner Workflow YAML",
+            liveUrl: `${GITHUB_REPO}/blob/main/.github/workflows/build-gpu-image.yml`
+          },
+          {
+            badge: "OBSERVABILITY",
+            title: "Metrics, Logs & Tracing",
+            tag: "PROMETHEUS, FLUENT BIT & LOKI",
+            engines: ["Prometheus", "Fluent Bit", "Grafana Loki", "Grafana (Read-Only)", "GCP Cloud Logging"],
+            desc: "Prometheus men-scrape metrik latency API & CPU/RAM, sementara Fluent Bit mengirim Structured JSON Logs (dengan correlation job_id) ke Grafana Loki untuk root-cause tracing. Semuanya tampil live secara Read-Only di /grafana/.",
+            proofLabel: "monitoring/prometheus.yml",
+            proofUrl: `${GITHUB_REPO}/blob/main/monitoring/prometheus.yml`,
+            liveLabel: "Open Live Grafana Dashboard",
+            liveUrl: "/grafana/"
+          },
+          {
+            badge: "BACKUP / DR",
+            title: "Automated Backup & DR",
+            tag: "DATA PROTECTION & RECOVERY",
+            engines: ["Cloud SQL Backups", "Automated pg_dump Cron", "GCS Backup Bucket", "Disk Snapshots"],
+            desc: "Strategi Disaster Recovery menggabungkan automated backup Cloud SQL dengan cron script pg_dump terkompresi ke GCS Bucket (retensi Lifecycle 14 hari), plus jadwal Persistent Disk Snapshot untuk fast recovery.",
+            proofLabel: "scripts/backup-db.sh",
+            proofUrl: `${GITHUB_REPO}/blob/main/scripts/backup-db.sh`,
+            liveLabel: null,
+            liveUrl: null
+          }
+        ]
+      },
+      en: {
+        layerFrontend: "FRONTEND APPLICATION",
+        layerBackend: "BACKEND INFRASTRUCTURE (X-RAY)",
+        transToBackend: "Dispatching HTTPS Request → Entering Cloud Infrastructure...",
+        transToFrontend: "Delivering Video Payload → Returning to Frontend App...",
+        heroSub: "Cloud Engineering • Containerization • AI Infrastructure • CI/CD & Observability",
+        heroDesc: "An interactive cloud-native showcase running on high-availability GCP infrastructure. Test the live AI video synthesis pipeline below and inspect the architecture behind the scenes.",
+        contactAbeBtn: "Contact Abe ↓",
+        startBtn: "Start Engine",
+        stat1: "SaaS Production",
+        stat2: "Live Apps",
+        stat3: "HA & Automation",
+        profTag: "ABE // CLOUD & AI INFRASTRUCTURE",
+        profTitle: "Builder Mindset, Cloud Execution",
+        profBio: "I'm Abe, a builder with 3.5+ years of hands-on experience designing, deploying, and operating real-user SaaS platforms independently. I am now channeling my cloud operations, AI container orchestration, and infrastructure automation background into a dedicated Cloud Engineering role.",
+        projHeader: "Production Track Record (3.5+ Years SaaS Operations)",
+        projGeneta: "AI image and video content generation platform. Managed custom open-source AI model container builds using a Self-Hosted GitHub Runner on GCP VM, Persistent Disk, Docker Registry, and Serverless GPU.",
+        projLocus: "AI Life Mentorship SaaS. Operated cloud backend infrastructure, user data storage management, AI API orchestration, and production service reliability.",
+        projImpctfy: "Cloud-based social platform. Owned end-to-end application architecture, database operations, cloud storage, and serverless functions from zero to launch.",
+        ctaTitle: "Interested in collaborating or scheduling an interview?",
+        ctaSub: "Open to Cloud Engineer & Cloud Operations roles.",
+        emailBtn: "Email Abe",
+        s2Tag: "01 / Frontend Application",
+        s2Title: "Select Avatar or Upload Photo",
+        s2Desc: "Each avatar represents a target voice synthesis language. Output is locked to 9:16 vertical video.",
+        s2OptA: "Select AI Avatar (Voice Language)",
+        s2OptB: "Or Upload Your Own Photo (9:16 — Default Voice: English)",
+        s2PassLabel: "GPU Access Passcode (Optional)",
+        s2PassPlaceholder: "Leave blank for Cloud Simulation Mode",
+        s2PassHint: "FinOps Guard: Real GPU workers only run with a valid passcode. Otherwise, the system runs in simulation mode.",
+        backBtn: "← Back",
+        genBtn: "Generate Video",
+        submittingBtn: "Submitting...",
+        s3Tag: "02 / Behind The Scenes — Cloud Infrastructure",
+        s3Title: "Under The Hood — System Architecture",
+        s3Desc: "You are now inspecting the backend control room. Click any node below to review its engines and GitHub proof.",
+        resumeBtn: "Resume Auto-Play",
+        runtimeLabel: "Runtime Request Flow",
+        devopsLabel: "Infrastructure, Security, DevOps, Observability & DR Layer",
+        changeInputBtn: "← Back to App Input",
+        liveGrafanaLink: "Live Grafana Metrics & Logs",
+        completeBtn: "Complete & Return to App →",
+        waitingBtn: "Waiting for Render...",
+        s4Tag: "03 / Frontend Output",
+        s4Title: "Your AI Video is Ready",
+        s4Desc: "The video has finished rendering in the cloud backend and is now delivered back to the user interface.",
+        specEngine: "AI ENGINE",
+        specDuration: "DURATION",
+        specRatio: "ASPECT RATIO",
+        specVoice: "VOICE LANGUAGE",
+        downloadBtn: "Download Video ↓",
+        retryBtn: "Create Another",
+        contactAbeCta: "Contact Abe →",
+        backDiagramBtn: "← Inspect Architecture",
+        inspectGrafanaBtn: "Grafana Metrics ↗",
+        proofPrefix: "ARTIFACT PROOF:",
+        viewSource: "View Source on GitHub ↗",
+        apiOnline: "API Online",
+        apiOffline: "API Offline",
+        runtime: [
+          {
+            step: "01",
+            title: "Load Balancer & HA",
+            tag: "NETWORKING, SSL & HIGH AVAILABILITY",
+            engines: ["Cloudflare DNS & WAF", "GCP Cloud Load Balancing", "Google Cloud VPC", "Cloud NAT", "Managed Instance Group (2 VMs)"],
+            desc: "HTTPS traffic is filtered by Cloudflare to the Cloud Load Balancer Static IP (Google-Managed SSL), checked via /api/health, and routed across 2 Backend VMs (Managed Instance Group) isolated inside a Private Subnet with no Public IPs.",
+            proofLabel: "terraform/network.tf",
+            proofUrl: `${GITHUB_REPO}/blob/main/terraform/network.tf`,
+            liveLabel: "Live Health Check (/api/health)",
+            liveUrl: "/api/health"
+          },
+          {
+            step: "02",
+            title: "Multi-VM Docker & DB",
+            tag: "COMPUTE, STATE & ANTI-TIMEOUT",
+            engines: ["GCP Compute Engine (Ubuntu)", "Docker Engine", "Python FastAPI", "Cloud SQL (PostgreSQL)", "Redis"],
+            desc: "The containerized FastAPI service inside the VM validates the request, caches transient state in Redis, persists job metadata in Cloud SQL (PostgreSQL) over Private IP, and responds in < 1s to prevent Load Balancer HTTP timeouts.",
+            proofLabel: "backend/Dockerfile",
+            proofUrl: `${GITHUB_REPO}/blob/main/backend/Dockerfile`,
+            liveLabel: "Inspect FastAPI App",
+            liveUrl: `${GITHUB_REPO}/blob/main/backend/main.py`
+          },
+          {
+            step: "03",
+            title: "Signed URL & GPU",
+            tag: "STORAGE SECURITY & INFERENCE",
+            engines: ["Google Cloud Storage (GCS)", "IAM v4 Signed URL", "Serverless GPU Worker"],
+            desc: "The backend issues short-lived GCS v4 Signed URLs (for input reading and output upload) and dispatches the workflow to the Serverless GPU Worker. Rendered .mp4 files upload directly to GCS without saturating VM memory.",
+            proofLabel: "backend/main.py (Signed URL)",
+            proofUrl: `${GITHUB_REPO}/blob/main/backend/main.py`,
+            liveLabel: "Storage Terraform Config",
+            liveUrl: `${GITHUB_REPO}/blob/main/terraform/storage.tf`
+          },
+          {
+            step: "04",
+            title: "Webhook Callback",
+            tag: "ASYNC COMPLETION & TOKEN GUARD",
+            engines: ["FastAPI Webhook", "Webhook Secret Token", "Cloud SQL (PostgreSQL)"],
+            desc: "Once rendering completes, the GPU Worker invokes /api/webhook through the Load Balancer with a secret validation token to update the job status in Cloud SQL to 'completed' for playback.",
+            proofLabel: "backend/main.py (/api/webhook)",
+            proofUrl: `${GITHUB_REPO}/blob/main/backend/main.py`,
+            liveLabel: null,
+            liveUrl: null
+          }
+        ],
+        devops: [
+          {
+            badge: "IAC / HA",
+            title: "Terraform & MIG",
+            tag: "INFRASTRUCTURE AS CODE",
+            engines: ["Terraform (HCL)", "GCS Remote State", "Instance Template & MIG", "Cloud IAP"],
+            desc: "All VPCs, Private Subnets, Cloud NAT, Cloud SQL, Load Balancer, and Managed Instance Group (2 VMs) are declaratively provisioned via Terraform. State is stored remotely in GCS, and SSH access is restricted exclusively to Cloud IAP Tunnels.",
+            proofLabel: "terraform/compute.tf",
+            proofUrl: `${GITHUB_REPO}/tree/main/terraform`,
+            liveLabel: null,
+            liveUrl: null
+          },
+          {
+            badge: "IAM / FINOPS",
+            title: "IAM, WIF & FinOps",
+            tag: "IDENTITY, SECURITY & COST CONTROL",
+            engines: ["GCP IAM (Least Privilege)", "Workload Identity Federation", "Secret Manager", "Billing Budget Alerts"],
+            desc: "Zero static JSON keys: VMs use Least-Privilege Attached Service Accounts, credentials live in Secret Manager, and costs are controlled through Billing Budget Alerts, GCS Lifecycle rules, and the GPU Passcode Guard.",
+            proofLabel: "terraform/iam.tf",
+            proofUrl: `${GITHUB_REPO}/blob/main/terraform/iam.tf`,
+            liveLabel: "Budget Alert Evidence",
+            liveUrl: `${GITHUB_REPO}/blob/main/docs/billing-budget-alert.png`
+          },
+          {
+            badge: "CI/CD",
+            title: "GitHub Actions",
+            tag: "AUTOMATED DELIVERY PIPELINE",
+            engines: ["GitHub Actions", "Workload Identity Federation", "GCP Artifact Registry", "Cloud IAP Deploy"],
+            desc: "Pushing to main triggers GitHub Actions to authenticate with GCP via Workload Identity Federation (keyless), build and push Docker images to Artifact Registry, and perform rolling deployments to the private VMs.",
+            proofLabel: ".github/workflows/deploy.yml",
+            proofUrl: `${GITHUB_REPO}/blob/main/.github/workflows/deploy.yml`,
+            liveLabel: "Live Pipeline Runs (Actions)",
+            liveUrl: `${GITHUB_REPO}/actions`
+          },
+          {
+            badge: "MLOPS / BUILD",
+            title: "Self-Hosted AI Builder",
+            tag: "CUSTOM CONTAINER BAKING PIPELINE",
+            engines: ["GCP Compute Engine VM", "GCP Persistent Disk", "Self-Hosted GitHub Runner", "Docker Hub"],
+            desc: "Large AI model weights are baked into custom Docker images using a Self-Hosted GitHub Actions Runner on a GCP Compute Engine VM with a dedicated Persistent Disk build cache, then pushed to Docker Hub for the Serverless GPU Worker.",
+            proofLabel: "gpu-worker/Dockerfile",
+            proofUrl: `${GITHUB_REPO}/tree/main/gpu-worker`,
+            liveLabel: "Runner Workflow YAML",
+            liveUrl: `${GITHUB_REPO}/blob/main/.github/workflows/build-gpu-image.yml`
+          },
+          {
+            badge: "OBSERVABILITY",
+            title: "Metrics, Logs & Tracing",
+            tag: "PROMETHEUS, FLUENT BIT & LOKI",
+            engines: ["Prometheus", "Fluent Bit", "Grafana Loki", "Grafana (Read-Only)", "GCP Cloud Logging"],
+            desc: "Prometheus scrapes API latency and CPU/RAM metrics, while Fluent Bit ships Structured JSON Logs (with correlation job_id) to Grafana Loki for root-cause tracing—all exposed publicly in Read-Only mode at /grafana/.",
+            proofLabel: "monitoring/prometheus.yml",
+            proofUrl: `${GITHUB_REPO}/blob/main/monitoring/prometheus.yml`,
+            liveLabel: "Open Live Grafana Dashboard",
+            liveUrl: "/grafana/"
+          },
+          {
+            badge: "BACKUP / DR",
+            title: "Automated Backup & DR",
+            tag: "DATA PROTECTION & RECOVERY",
+            engines: ["Cloud SQL Backups", "Automated pg_dump Cron", "GCS Backup Bucket", "Disk Snapshots"],
+            desc: "Disaster Recovery combines Cloud SQL automated backups with a compressed pg_dump cron script to a GCS Bucket (14-day Lifecycle retention) alongside scheduled Persistent Disk Snapshots for rapid restoration.",
+            proofLabel: "scripts/backup-db.sh",
+            proofUrl: `${GITHUB_REPO}/blob/main/scripts/backup-db.sh`,
+            liveLabel: null,
+            liveUrl: null
+          }
+        ]
+      },
+      zh: {
+        layerFrontend: "前端应用层",
+        layerBackend: "后端云基础设施 (透视视图)",
+        transToBackend: "正在发送 HTTPS 请求 → 进入云端基础设施后台...",
+        transToFrontend: "视频结果已生成 → 正在返回前端应用界面...",
+        heroSub: "云架构工程 • DevOps • 容器化部署 • AI 基础设施 • CI/CD 与可观测性",
+        heroDesc: "基于 GCP 高可用架构构建的云原生交互式展示平台。点击启动引擎即可测试 AI 视频生成流水线并实时透视底层架构运转。",
+        contactAbeBtn: "联系 Abe ↓",
+        startBtn: "启动引擎",
+        stat1: "SaaS 生产运维",
+        stat2: "在线应用",
+        stat3: "高可用与自动化",
+        profTag: "ABE // 云原生与 AI 基础设施",
+        profTitle: "产品构建思维，云原生工程落地",
+        profBio: "我是 Abe，拥有超过 3.5 年独立设计、部署并运维真实用户 SaaS 产品的实战经验。目前正将这些云端运维、AI 容器编排及基础设施自动化实践投入到专业云架构工程团队中。",
+        projHeader: "真实产品履历（3.5+ 年 SaaS 运营经验）",
+        projGeneta: "AI 图文与视频生成平台。基于 GCP VM 部署自托管 GitHub Runner 挂载持久化磁盘打包开源 AI 容器镜像，推送至镜像仓库并接入 Serverless GPU。",
+        projLocus: "面向真实用户的 AI 成长导师应用。负责云端后端架构、用户存储管理、AI 接口编排及生产环境稳定性运维。",
+        projImpctfy: "具备真实用户流量的云端社交平台。从零到一主导应用架构、数据库运维、云存储及无服务器云函数上线。",
+        ctaTitle: "有意进一步沟通或安排技术面试？",
+        ctaSub: "求职意向：云工程师 (Cloud Engineer) / 云运维工程师。",
+        emailBtn: "发送邮件",
+        s2Tag: "01 / 前端应用界面",
+        s2Title: "选择头像或上传照片",
+        s2Desc: "不同头像对应不同语种的 AI 语音合成，最终输出锁定为 9:16 竖屏视频。",
+        s2OptA: "选择 AI 头像（语音语种）",
+        s2OptB: "或上传本地照片 (9:16 — 默认语音: English)",
+        s2PassLabel: "GPU 访问通行码（可选）",
+        s2PassPlaceholder: "留空则进入云端模拟模式",
+        s2PassHint: "FinOps 成本保护：仅在输入有效通行码时调用真实 GPU 节点；留空仍可完整体验云架构模拟流程。",
+        backBtn: "← 返回",
+        genBtn: "生成视频",
+        submittingBtn: "提交中...",
+        s3Tag: "02 / 幕后原理 — 云端基础设施后台",
+        s3Title: "系统底层透视 — 云架构实时运行",
+        s3Desc: "您现在已进入系统后端控制层。点击任意节点即可查看所使用的技术引擎及 GitHub 源码凭证。",
+        resumeBtn: "恢复自动演示",
+        runtimeLabel: "运行时请求链路",
+        devopsLabel: "基础设施、安全、DevOps、可观测性与灾备层",
+        changeInputBtn: "← 返回输入界面",
+        liveGrafanaLink: "实时 Grafana 监控与日志",
+        completeBtn: "完成并返回前端界面 →",
+        waitingBtn: "正在渲染视频...",
+        s4Tag: "03 / 前端输出结果",
+        s4Title: "您的 AI 视频已生成",
+        s4Desc: "视频已在云端后端完成渲染，并已成功回传至前端用户界面。",
+        specEngine: "AI 引擎",
+        specDuration: "视频时长",
+        specRatio: "画面比例",
+        specVoice: "语音语种",
+        downloadBtn: "下载视频 ↓",
+        retryBtn: "再制作一个",
+        contactAbeCta: "联系 Abe →",
+        backDiagramBtn: "← 查看后端架构",
+        inspectGrafanaBtn: "Grafana 监控 ↗",
+        proofPrefix: "源码凭证:",
+        viewSource: "在 GitHub 查看源码 ↗",
+        apiOnline: "API 在线",
+        apiOffline: "API 离线",
+        runtime: [
+          {
+            step: "01",
+            title: "负载均衡与高可用",
+            tag: "网络隔离、SSL 与高可用架构",
+            engines: ["Cloudflare DNS & WAF", "GCP Cloud Load Balancing", "Google Cloud VPC", "Cloud NAT", "托管实例组 (2 台 VM)"],
+            desc: "HTTPS 流量经由 Cloudflare 防护后进入 GCP 云负载均衡器静态 IP（启用 Google 托管 SSL），通过 /api/health 健康检查将流量分发至无公网 IP 的私有子网托管实例组（2 台后端 VM）。",
+            proofLabel: "terraform/network.tf",
+            proofUrl: `${GITHUB_REPO}/blob/main/terraform/network.tf`,
+            liveLabel: "实时健康检查 (/api/health)",
+            liveUrl: "/api/health"
+          },
+          {
+            step: "02",
+            title: "多机容器与数据库",
+            tag: "计算层、状态缓存与防超时设计",
+            engines: ["GCP Compute Engine (Ubuntu)", "Docker Engine", "Python FastAPI", "Cloud SQL (PostgreSQL)", "Redis"],
+            desc: "VM 内的 FastAPI 容器校验请求后，将瞬时状态写入 Redis，并将任务元数据通过内网 IP 存入 Cloud SQL (PostgreSQL)，在 1 秒内迅速响应前端以避免负载均衡器 HTTP 超时。",
+            proofLabel: "backend/Dockerfile",
+            proofUrl: `${GITHUB_REPO}/blob/main/backend/Dockerfile`,
+            liveLabel: "查看 FastAPI 源码",
+            liveUrl: `${GITHUB_REPO}/blob/main/backend/main.py`
+          },
+          {
+            step: "03",
+            title: "签名 URL 与 GPU",
+            tag: "存储安全与无服务器推理",
+            engines: ["Google Cloud Storage (GCS)", "IAM v4 签名 URL", "Serverless GPU 工作节点"],
+            desc: "后端签发有时效限制的 GCS v4 签名 URL（用于读取输入图片与直传视频），并将工作流派发至 Serverless GPU 节点。渲染完成的 .mp4 直传对象存储，不占用后端 VM 内存。",
+            proofLabel: "backend/main.py (Signed URL)",
+            proofUrl: `${GITHUB_REPO}/blob/main/backend/main.py`,
+            liveLabel: "Storage Terraform 配置",
+            liveUrl: `${GITHUB_REPO}/blob/main/terraform/storage.tf`
+          },
+          {
+            step: "04",
+            title: "Webhook 异步回调",
+            tag: "异步完成通知与令牌校验",
+            engines: ["FastAPI Webhook", "Webhook 密钥校验", "Cloud SQL (PostgreSQL)"],
+            desc: "视频渲染并上传完毕后，GPU 工作节点携带安全校验令牌通过负载均衡器回调 /api/webhook，将 Cloud SQL 中的任务状态更新为 completed 以供前端播放。",
+            proofLabel: "backend/main.py (/api/webhook)",
+            proofUrl: `${GITHUB_REPO}/blob/main/backend/main.py`,
+            liveLabel: null,
+            liveUrl: null
+          }
+        ],
+        devops: [
+          {
+            badge: "IAC / 高可用",
+            title: "Terraform 与 MIG",
+            tag: "基础设施即代码",
+            engines: ["Terraform (HCL)", "GCS 远程状态", "实例模板与 MIG", "Cloud IAP"],
+            desc: "所有 VPC、私有子网、Cloud NAT、Cloud SQL、负载均衡器及托管实例组均通过 Terraform 声明式构建。State 文件托管于 GCS，运维 SSH 访问严格限制通过 Cloud IAP 隧道完成。",
+            proofLabel: "terraform/compute.tf",
+            proofUrl: `${GITHUB_REPO}/tree/main/terraform`,
+            liveLabel: null,
+            liveUrl: null
+          },
+          {
+            badge: "IAM / FINOPS",
+            title: "IAM 权限与成本控制",
+            tag: "身份安全与 FinOps 预算治理",
+            engines: ["GCP IAM (最小权限原则)", "Workload Identity Federation", "Secret Manager", "账单预算告警"],
+            desc: "零静态 JSON 密钥：VM 绑定最小权限服务账号，敏感密钥托管于 Secret Manager，并通过 GCP 预算告警、GCS 生命周期清理规则及 GPU 通行码门禁严格控制成本。",
+            proofLabel: "terraform/iam.tf",
+            proofUrl: `${GITHUB_REPO}/blob/main/terraform/iam.tf`,
+            liveLabel: "查看预算告警凭证",
+            liveUrl: `${GITHUB_REPO}/blob/main/docs/billing-budget-alert.png`
+          },
+          {
+            badge: "CI/CD",
+            title: "GitHub Actions",
+            tag: "自动化交付流水线",
+            engines: ["GitHub Actions", "Workload Identity Federation", "GCP Artifact Registry", "Cloud IAP 部署"],
+            desc: "向主分支推送代码后，GitHub Actions 通过 Workload Identity Federation 无密钥认证接入 GCP，自动构建镜像并推送至 Artifact Registry，随后对私有 VM 执行滚动部署。",
+            proofLabel: ".github/workflows/deploy.yml",
+            proofUrl: `${GITHUB_REPO}/blob/main/.github/workflows/deploy.yml`,
+            liveLabel: "查看实时流水线 (Actions)",
+            liveUrl: `${GITHUB_REPO}/actions`
+          },
+          {
+            badge: "MLOPS / 构建",
+            title: "自托管 AI 镜像构建器",
+            tag: "大型容器镜像打包流水线",
+            engines: ["GCP Compute Engine VM", "GCP Persistent Disk", "自托管 GitHub Runner", "Docker Hub"],
+            desc: "利用部署在 GCP VM 上的自托管 GitHub Runner 并挂载大容量持久化磁盘作为构建缓存，将大型开源 AI 模型打包进自定义 Docker 镜像后推送至 Docker Hub 供 GPU 节点拉取。",
+            proofLabel: "gpu-worker/Dockerfile",
+            proofUrl: `${GITHUB_REPO}/tree/main/gpu-worker`,
+            liveLabel: "Runner 工作流 YAML",
+            liveUrl: `${GITHUB_REPO}/blob/main/.github/workflows/build-gpu-image.yml`
+          },
+          {
+            badge: "可观测性",
+            title: "指标、日志与链路追踪",
+            tag: "PROMETHEUS, FLUENT BIT & LOKI",
+            engines: ["Prometheus", "Fluent Bit", "Grafana Loki", "Grafana (只读模式)", "GCP Cloud Logging"],
+            desc: "Prometheus 采集 API 延迟与 CPU/内存指标，Fluent Bit 将携带关联 job_id 的结构化 JSON 日志送入 Grafana Loki 实现根因追踪，并在 /grafana/ 以只读模式公开展示。",
+            proofLabel: "monitoring/prometheus.yml",
+            proofUrl: `${GITHUB_REPO}/blob/main/monitoring/prometheus.yml`,
+            liveLabel: "打开实时 Grafana 面板",
+            liveUrl: "/grafana/"
+          },
+          {
+            badge: "备份与容灾",
+            title: "自动化备份与灾备",
+            tag: "数据保护与快速恢复",
+            engines: ["Cloud SQL 自动备份", "pg_dump 定时任务", "GCS 备份存储桶", "磁盘快照"],
+            desc: "容灾方案结合了 Cloud SQL 自动备份与定时压缩 pg_dump 备份至 GCS（14 天生命周期留存），并配置持久化磁盘快照策略以确保异常发生时可快速恢复。",
+            proofLabel: "scripts/backup-db.sh",
+            proofUrl: `${GITHUB_REPO}/blob/main/scripts/backup-db.sh`,
+            liveLabel: null,
+            liveUrl: null
+          }
+        ]
+      }
+    };
+
+    function setLanguage(lang) {
+      currentLang = ['id', 'en', 'zh'].includes(lang) ? lang : 'id';
+      localStorage.setItem('abe_lang', currentLang);
+      const t = TRANSLATIONS[currentLang];
+
+      ['id', 'en', 'zh'].forEach(code => {
+        const btn = document.getElementById(`lang-${code}`);
+        btn.className = code === currentLang
+          ? "lang-btn px-2.5 py-1 rounded-full bg-violet-600/80 text-white font-semibold transition"
+          : "lang-btn px-2.5 py-1 rounded-full text-zinc-400 hover:text-white transition";
+      });
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) el.innerText = t[key];
+      });
+
+      document.getElementById('passcodeInput').placeholder = t.s2PassPlaceholder;
+      updateApiPillText();
+      updateLayerAtmosphere();
+      renderDiagram();
+    }
+
+    function updateApiPillText() {
+      const t = TRANSLATIONS[currentLang];
+      const dot = document.getElementById('apiStatusDot');
+      const text = document.getElementById('apiStatusText');
+      if (isApiOnline) {
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]";
+        text.className = "text-emerald-300 truncate";
+        text.innerText = `${t.apiOnline} • ${onlineVmName}`;
+      } else {
+        dot.className = "w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_10px_#f43f5e]";
+        text.className = "text-rose-400 truncate";
+        text.innerText = t.apiOffline;
+      }
+    }
+
+    function getCurrentScreen() {
+      return [1, 2, 3, 4].find(i => !document.getElementById(`screen-${i}`).classList.contains('hidden')) || 1;
+    }
+
+    function updateLayerAtmosphere() {
+      const t = TRANSLATIONS[currentLang];
+      const screen = getCurrentScreen();
+      const grid = document.getElementById('blueprintOverlay');
+      const layerIndicator = document.getElementById('layerIndicator');
+      const layerDot = document.getElementById('layerDot');
+      const layerText = document.getElementById('layerText');
+
+      if (screen === 1) {
+        layerIndicator.className = "hidden";
+      } else {
+        layerIndicator.className = "hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full glass-surface text-[11px] font-mono tracking-wider uppercase transition-all duration-500";
+      }
+
+      if (screen === 3) {
+        grid.classList.remove('opacity-0');
+        grid.classList.add('opacity-100');
+        layerDot.className = "w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee] animate-pulse";
+        layerText.className = "text-cyan-300";
+        layerText.innerText = t.layerBackend;
+      } else {
+        grid.classList.remove('opacity-100');
+        grid.classList.add('opacity-0');
+        layerDot.className = "w-2 h-2 rounded-full bg-violet-400";
+        layerText.className = "text-zinc-200";
+        layerText.innerText = t.layerFrontend;
+      }
+    }
+
+    function scrollToProfile() {
+      const target = document.getElementById('profileSection');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function goToProfileFromOutput() {
+      goToScreen(1, false);
+      setTimeout(scrollToProfile, 80);
+    }
+
+    function transitionToScreen(targetScreen, direction) {
+      if (isTransitioning) return;
+      isTransitioning = true;
+      const t = TRANSLATIONS[currentLang];
+      const overlay = document.getElementById('transitionOverlay');
+      const transText = document.getElementById('transitionText');
+      transText.innerText = direction === 'toBackend' ? t.transToBackend : t.transToFrontend;
+      overlay.classList.remove('hidden');
+
+      setTimeout(() => {
+        goToScreen(targetScreen);
+        overlay.classList.add('hidden');
+        isTransitioning = false;
+      }, 850);
+    }
+
+    function goToScreen(num, scrollTop = true) {
+      if (num !== 3) {
+        clearInterval(tourTimer);
+        tourTimer = null;
+      }
+      if (num !== 4) {
+        const vid = document.getElementById('resultVideo');
+        if (vid) vid.pause();
+      }
+      [1, 2, 3, 4].forEach(i => document.getElementById(`screen-${i}`).classList.add('hidden'));
+      document.getElementById(`screen-${num}`).classList.remove('hidden');
+      if (scrollTop) window.scrollTo({ top: 0, behavior: 'smooth' });
+      updateLayerAtmosphere();
+      if (num === 3 && !tourTimer) {
+        renderDiagram();
+        startAutoTour();
+      }
+    }
+
+    function selectAvatar(voiceLang, url, btn) {
+      selectedVoiceLang = voiceLang;
+      selectedPresetUrl = url;
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
+      }
+      document.getElementById('fileInput').value = "";
+      document.getElementById('previewImg').src = url;
+      document.getElementById('previewVoiceBadge').innerText = `VOICE: ${voiceLang.toUpperCase()}`;
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('border-violet-500', 'bg-violet-950/35'));
+      btn.classList.add('border-violet-500', 'bg-violet-950/35');
+      hideFormError();
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+      if (!allowed.includes(file.type)) {
+        showFormError("Unsupported file format. Please upload JPG, PNG, or WEBP.");
+        event.target.value = "";
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showFormError("File exceeds 10MB limit.");
+        event.target.value = "";
+        return;
+      }
+
+      hideFormError();
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = URL.createObjectURL(file);
+
+      selectedPresetUrl = "";
+      selectedVoiceLang = "en";
+      document.getElementById('previewImg').src = currentObjectUrl;
+      document.getElementById('previewVoiceBadge').innerText = "VOICE: EN";
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('border-violet-500', 'bg-violet-950/35'));
+    }
+
+    function showFormError(msg) {
+      const box = document.getElementById('formErrorBox');
+      box.innerText = msg;
+      box.classList.remove('hidden');
+    }
+
+    function hideFormError() {
+      document.getElementById('formErrorBox').classList.add('hidden');
+    }
+
+    function setCompleteButtonState(ready) {
+      const t = TRANSLATIONS[currentLang];
+      const btn = document.getElementById('completeBtn');
+      if (ready) {
+        btn.disabled = false;
+        btn.innerText = t.completeBtn;
+        btn.classList.remove('opacity-40', 'cursor-not-allowed');
+      } else {
+        btn.disabled = true;
+        btn.innerText = t.waitingBtn;
+        btn.classList.add('opacity-40', 'cursor-not-allowed');
+      }
+    }
+
+    async function startGeneration() {
+      const fileInput = document.getElementById('fileInput');
+      const passcode = document.getElementById('passcodeInput').value;
+      const genBtn = document.getElementById('generateBtn');
+      const t = TRANSLATIONS[currentLang];
+
+      hideFormError();
+      genBtn.disabled = true;
+      genBtn.innerText = t.submittingBtn;
+      document.getElementById('finalVoiceLang').innerText = VOICE_LABELS[selectedVoiceLang] || "English (EN)";
+
+      clearInterval(pollTimer);
+      currentJobId = null;
+
+      try {
+        const formData = new FormData();
+        if (fileInput.files.length) formData.append("image_file", fileInput.files[0]);
+        formData.append("preset_image_url", selectedPresetUrl);
+        formData.append("voice_lang", selectedVoiceLang);
+        formData.append("passcode", passcode);
+
+        const res = await fetch('/api/generate', { method: 'POST', body: formData });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          showFormError(data.detail || `Request failed (${res.status})`);
+          genBtn.disabled = false;
+          genBtn.innerText = t.genBtn;
+          return;
+        }
+
+        isPreviewMode = false;
+        currentJobId = data.job_id;
+        setupScreen3(data.job_id, data.served_by_vm, data.mode, false);
+        setCompleteButtonState(false);
+        pollTimer = setInterval(pollJob, 2500);
+        transitionToScreen(3, 'toBackend');
+      } catch {
+        if (!isApiOnline) {
+          isPreviewMode = true;
+          const sampleVid = "https://www.w3schools.com/html/mov_bbb.mp4";
+          setupScreen3("preview_01", "ui-preview-node", "OFFLINE_UI_PREVIEW", true);
+          document.getElementById('resultVideo').src = sampleVid;
+          document.getElementById('downloadBtn').href = sampleVid;
+          document.getElementById('finalVm').innerText = "ui-preview-node";
+          document.getElementById('finalMode').innerText = "OFFLINE_UI_PREVIEW";
+          setCompleteButtonState(true);
+          transitionToScreen(3, 'toBackend');
+        } else {
+          showFormError("Network error while contacting backend API.");
+        }
+      } finally {
+        genBtn.disabled = false;
+        genBtn.innerText = t.genBtn;
+      }
+    }
+
+    function setupScreen3(jobId, vm, mode, completedImmediately) {
+      activeLayer = "runtime";
+      activeIndex = 0;
+      document.getElementById('liveJobId').innerText = jobId;
+      document.getElementById('liveVm').innerText = vm;
+      const statusBadge = document.getElementById('liveRenderStatus');
+      if (completedImmediately) {
+        statusBadge.innerText = `Preview (${mode})`;
+        statusBadge.className = "px-3 py-1 rounded-lg bg-violet-500/20 text-violet-300 border border-violet-500/30";
+      } else {
+        statusBadge.innerText = `Processing (${mode})...`;
+        statusBadge.className = "px-3 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/20 animate-pulse";
+      }
+    }
+
+    async function pollJob() {
+      if (!currentJobId || isPreviewMode) return;
+      try {
+        const res = await fetch(`/api/job/${currentJobId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const statusBadge = document.getElementById('liveRenderStatus');
+
+        if (data.status === 'completed') {
+          clearInterval(pollTimer);
+          pollTimer = null;
+          statusBadge.innerText = `Completed (${data.mode})`;
+          statusBadge.className = "px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+          document.getElementById('resultVideo').src = data.video_url;
+          document.getElementById('downloadBtn').href = data.video_url;
+          document.getElementById('finalVm').innerText = data.served_by_vm;
+          document.getElementById('finalMode').innerText = data.mode;
+          setCompleteButtonState(true);
+        } else if (data.status === 'failed') {
+          clearInterval(pollTimer);
+          pollTimer = null;
+          statusBadge.innerText = "FAILED — Check Grafana Logs";
+          statusBadge.className = "px-3 py-1 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30";
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }
+
+    function renderDiagram() {
+      const t = TRANSLATIONS[currentLang];
+      const runtimeEl = document.getElementById('runtimePipeline');
+      runtimeEl.innerHTML = t.runtime.map((item, idx) => {
+        const isActive = activeLayer === "runtime" && activeIndex === idx;
+        const arrow = idx < t.runtime.length - 1
+          ? `<div class="flex items-center justify-center text-violet-500/60 font-mono text-sm py-0.5 md:px-1 select-none"><span class="hidden md:inline">→</span><span class="md:hidden">↓</span></div>`
+          : "";
+        return `
+          <button onclick="inspectNode('runtime', ${idx})" class="w-full h-full flex flex-col justify-center p-4 rounded-2xl border text-left transition-all duration-500 ${isActive ? 'node-active' : 'glass-card hover:border-violet-500/40'}">
+            <div class="text-[10px] font-mono ${isActive ? 'text-violet-300' : 'text-zinc-500'}">STEP ${item.step}</div>
+            <div class="text-sm font-bold text-white mt-1 leading-snug">${item.title}</div>
+          </button>
+          ${arrow}
+        `;
+      }).join('');
+
+      const devopsEl = document.getElementById('devopsFoundation');
+      devopsEl.innerHTML = t.devops.map((item, idx) => {
+        const isActive = activeLayer === "devops" && activeIndex === idx;
+        return `
+          <button onclick="inspectNode('devops', ${idx})" class="w-full h-full p-3.5 rounded-2xl border text-left transition-all duration-300 flex items-center justify-between ${isActive ? 'node-active' : 'glass-card hover:border-violet-500/40'}">
+            <div>
+              <div class="text-[10px] font-mono ${isActive ? 'text-violet-300' : 'text-zinc-500'}">${item.badge}</div>
+              <div class="text-xs sm:text-sm font-semibold text-zinc-100 mt-0.5">${item.title}</div>
+            </div>
+            <span class="text-xs text-zinc-600 font-mono ml-2">↗</span>
+          </button>
+        `;
+      }).join('');
+
+      const selected = activeLayer === "runtime" ? t.runtime[activeIndex] : t.devops[activeIndex];
+      const enginesHtml = selected.engines.map(eng =>
+        `<span class="px-2.5 py-0.5 rounded-md bg-violet-950/60 border border-violet-500/25 text-[11px] font-mono text-violet-200">${eng}</span>`
+      ).join('');
+
+      const liveBtnHtml = selected.liveUrl
+        ? `<a href="${selected.liveUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600/25 hover:bg-violet-600/40 border border-violet-500/40 text-[11px] font-mono text-violet-200 transition">${selected.liveLabel} ↗</a>`
+        : "";
+
+      document.getElementById('pipelineDetailCard').innerHTML = `
+        <div class="space-y-2.5">
+          <div>
+            <div class="text-[11px] font-mono tracking-widest text-violet-400">${selected.tag}</div>
+            <h3 class="text-lg sm:text-xl font-bold text-white mt-0.5">${selected.title}</h3>
+          </div>
+          <div class="flex flex-wrap gap-1.5">${enginesHtml}</div>
+          <p class="text-sm text-zinc-300 leading-relaxed">${selected.desc}</p>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/[0.06]">
+          <span class="text-[11px] font-mono text-zinc-500">${t.proofPrefix} <span class="text-zinc-300">${selected.proofLabel}</span></span>
+          <div class="flex flex-wrap items-center gap-2">
+            ${liveBtnHtml}
+            <a href="${selected.proofUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-card hover:border-white/25 text-[11px] font-mono text-zinc-200 transition">
+              ${t.viewSource}
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    function startAutoTour() {
+      clearInterval(tourTimer);
+      document.getElementById('resumeTourBtn').classList.add('hidden');
+      tourTimer = setInterval(() => {
+        activeLayer = "runtime";
+        activeIndex = (activeIndex + 1) % TRANSLATIONS[currentLang].runtime.length;
+        renderDiagram();
+      }, 3000);
+    }
+
+    function inspectNode(layer, idx) {
+      clearInterval(tourTimer);
+      tourTimer = null;
+      activeLayer = layer;
+      activeIndex = idx;
+      document.getElementById('resumeTourBtn').classList.remove('hidden');
+      renderDiagram();
+    }
+
+    function resumeAutoTour() {
+      activeLayer = "runtime";
+      startAutoTour();
+    }
+
+    async function checkHealth() {
+      try {
+        const res = await fetch('/api/health');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        isApiOnline = true;
+        onlineVmName = data.vm_hostname;
+      } catch {
+        isApiOnline = false;
+      }
+      updateApiPillText();
+    }
+
+    selectAvatar('id', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=540&h=960&fit=crop', document.getElementById('avatar-btn-id'));
+    setLanguage(currentLang);
+    checkHealth();
+    setInterval(checkHealth, 15000);
+  </script>
+</body>
+</html>

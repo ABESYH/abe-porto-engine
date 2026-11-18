@@ -1,0 +1,20 @@
+# Terraform state, cache & sensitive variables
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Secrets & GCP credential keys
+.env
+*.pem
+*.key
+*credentials*.json
+*service-account*.json
+
+# Python & OS files
+__pycache__/
+*.pyc
+.DS_Store
+
+# ltx workflow files
+backend/video_ltx2_3_i2v_workflow.json
