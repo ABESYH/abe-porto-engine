@@ -87,7 +87,7 @@
         <span id="layerText" class="text-zinc-200">FRONTEND APPLICATION</span>
       </div>
 
-      <div id="apiStatusPill" class="pointer-events-auto flex items-center gap-2 px-3 py-2 rounded-full glass-surface text-[11px] sm:text-xs font-mono tracking-tight max-w-[210px] sm:max-w-none">
+      <div id="apiStatusPill" class="pointer-events-auto flex items-center gap-2 px-3 py-2 rounded-full glass-surface text-[11px] sm:text-xs font-mono tracking-tight max-w-[175px] sm:max-w-none">
         <span id="apiStatusDot" class="w-2 h-2 rounded-full bg-zinc-500 shrink-0"></span>
         <span id="apiStatusText" class="text-zinc-400 truncate">Checking API...</span>
       </div>
@@ -107,7 +107,7 @@
               <h1 class="text-5xl sm:text-7xl font-extrabold tracking-tight text-white leading-[1.05]">
                 ABE <span class="bg-gradient-to-r from-violet-400 via-purple-300 to-indigo-400 bg-clip-text text-transparent">PORTO</span>
               </h1>
-              <p class="text-sm sm:text-base text-zinc-300 font-medium" data-i18n="heroSub">
+              <p class="text-sm sm:text-base text-zinc-200 font-medium" data-i18n="heroSub">
                 Cloud Engineering • Containerization • AI Infrastructure • CI/CD & Observability
               </p>
             </div>
@@ -230,7 +230,7 @@
                   </div>
                 </div>
                 <p class="text-xs text-zinc-400 leading-relaxed" data-i18n="projImpctfy">
-                  Platform social SaaS. Bertanggung jawab penuh atas arsitektur aplikasi, database, cloud storage, dan cloud functions dari nol sampai rilis.
+                  Platform social SaaS dengan real user traffic. Bertanggung jawab penuh atas arsitektur aplikasi, database, cloud storage, dan cloud functions dari nol sampai rilis.
                 </p>
               </div>
 
@@ -441,6 +441,8 @@
           <a href="/grafana/" target="_blank" rel="noopener noreferrer" class="text-violet-300 hover:text-violet-200 transition" data-i18n="inspectGrafanaBtn">Grafana Metrics ↗</a>
         </div>
         <div class="flex flex-wrap items-center gap-3">
+          <span>Release: <b id="finalRelease" class="text-emerald-300">-</b></span>
+          <span>•</span>
           <span>Served by VM: <b id="finalVm" class="text-zinc-300">-</b></span>
           <span>•</span>
           <span>Mode: <b id="finalMode" class="text-violet-300">-</b></span>
@@ -451,16 +453,22 @@
   </main>
 
   <footer class="text-center text-[11px] font-mono text-zinc-600 py-5 px-4 border-t border-white/[0.04]">
-    ABE &nbsp;•&nbsp; FastAPI &nbsp;•&nbsp; Docker &nbsp;•&nbsp; Cloud SQL (PostgreSQL) &nbsp;•&nbsp; Redis &nbsp;•&nbsp; Terraform &nbsp;•&nbsp; Prometheus, Fluent Bit & Grafana
+    ABE &nbsp;•&nbsp; Release <span id="appVersionText" class="text-violet-400">v1.0.0-dev</span> &nbsp;•&nbsp; FastAPI &nbsp;•&nbsp; Docker &nbsp;•&nbsp; Cloud SQL (PostgreSQL) &nbsp;•&nbsp; Redis &nbsp;•&nbsp; Terraform &nbsp;•&nbsp; Prometheus, Fluent Bit & Grafana
   </footer>
 
   <script>
+    // Automatically stamped by GitHub Actions CI/CD during deploy (e.g., v1.0.14)
+    const APP_RELEASE = "__APP_RELEASE__";
+    const DISPLAY_RELEASE = APP_RELEASE.startsWith("__") ? "v1.0.0-dev" : APP_RELEASE;
+
     const GITHUB_PROFILE = "https://github.com/ABESYH";
     const GITHUB_REPO = `${GITHUB_PROFILE}/abe-porto-engine`;
     const LINKEDIN_PROFILE = "https://linkedin.com/in/aabbee";
 
     document.getElementById('githubProfileLink').href = GITHUB_PROFILE;
     document.getElementById('linkedinLink').href = LINKEDIN_PROFILE;
+    document.getElementById('appVersionText').innerText = DISPLAY_RELEASE;
+    document.getElementById('finalRelease').innerText = DISPLAY_RELEASE;
 
     const storedLang = localStorage.getItem('abe_lang');
     let currentLang = ['id', 'en', 'zh'].includes(storedLang) ? storedLang : 'id';
@@ -539,7 +547,7 @@
         contactAbeCta: "Contact Abe →",
         backDiagramBtn: "← Lihat Arsitektur",
         inspectGrafanaBtn: "Grafana Metrics ↗",
-        proofPrefix: "BUKTI ARTIFAK:",
+        proofPrefix: "ARTIFACT PROOF:",
         viewSource: "View Source di GitHub ↗",
         apiOnline: "API Online",
         apiOffline: "API Offline",
@@ -613,13 +621,13 @@
             liveUrl: `${GITHUB_REPO}/blob/main/docs/billing-budget-alert.png`
           },
           {
-            badge: "CI/CD",
+            badge: "CI/CD & GITOPS",
             title: "GitHub Actions",
-            tag: "AUTOMATED DELIVERY PIPELINE",
-            engines: ["GitHub Actions", "Workload Identity Federation", "GCP Artifact Registry", "Cloud IAP Deploy"],
-            desc: "Multi-branch PR workflow, automated unit tests dengan pytest, terraform plan validation, semantic versioning tag otomatis, dan zero-downtime rolling deployment ke VM privat.",
-            proofLabel: ".github/workflows/deploy.yml",
-            proofUrl: `${GITHUB_REPO}/blob/main/.github/workflows/deploy.yml`,
+            tag: "PR GATE, VERSIONING & ROLLBACK",
+            engines: ["GitHub Actions", "Pytest & Terraform Plan", "Workload Identity Federation", "Auto Git Tag & Rollback"],
+            desc: "Multi-branch workflow (dev → PR → main): Pull Request otomatis divalidasi oleh Pytest dan dry-run Terraform Plan. Setelah merge ke main, CD mem-build image dengan semantic versioning, rolling deploy ke MIG, otomatis membuat Git Tag, serta tersedia workflow Emergency Rollback.",
+            proofLabel: ".github/workflows/ (ci, deploy, rollback)",
+            proofUrl: `${GITHUB_REPO}/tree/main/.github/workflows`,
             liveLabel: "Riwayat Pipeline (Actions)",
             liveUrl: `${GITHUB_REPO}/actions`
           },
@@ -787,13 +795,13 @@
             liveUrl: `${GITHUB_REPO}/blob/main/docs/billing-budget-alert.png`
           },
           {
-            badge: "CI/CD",
+            badge: "CI/CD & GITOPS",
             title: "GitHub Actions",
-            tag: "AUTOMATED DELIVERY PIPELINE",
-            engines: ["GitHub Actions", "Workload Identity Federation", "GCP Artifact Registry", "Cloud IAP Deploy"],
-            desc: "Multi-branch PR workflow, automated unit tests with pytest, terraform plan validation, automated semantic versioning tags, and zero-downtime rolling deployments to private VMs.",
-            proofLabel: ".github/workflows/deploy.yml",
-            proofUrl: `${GITHUB_REPO}/blob/main/.github/workflows/deploy.yml`,
+            tag: "PR GATE, VERSIONING & ROLLBACK",
+            engines: ["GitHub Actions", "Pytest & Terraform Plan", "Workload Identity Federation", "Auto Git Tag & Rollback"],
+            desc: "Multi-branch workflow (dev → PR → main): Pull Requests are validated automatically via Pytest and dry-run Terraform Plan. Merging to main triggers keyless WIF build, semantic versioning, MIG rolling deploy, auto Git Tagging, plus an Emergency Rollback workflow.",
+            proofLabel: ".github/workflows/ (ci, deploy, rollback)",
+            proofUrl: `${GITHUB_REPO}/tree/main/.github/workflows`,
             liveLabel: "Live Pipeline Runs (Actions)",
             liveUrl: `${GITHUB_REPO}/actions`
           },
@@ -837,7 +845,7 @@
         layerBackend: "后端云基础设施 (透视视图)",
         transToBackend: "正在发送 HTTPS 请求 → 进入云端基础设施后台...",
         transToFrontend: "视频结果已生成 → 正在返回前端应用界面...",
-        heroSub: "云架构工程 • 容器化部署 • AI 基础设施 • CI/CD 与可观测性",
+        heroSub: "云架构工程 • DevOps • 容器化部署 • AI 基础设施 • CI/CD 与可观测性",
         heroDesc: "基于 GCP 高可用架构构建的云原生交互式展示平台。点击启动引擎即可测试 AI 视频生成流水线并实时透视底层架构运转。",
         contactAbeBtn: "联系 Abe ↓",
         startBtn: "启动引擎",
@@ -874,6 +882,7 @@
         changeInputBtn: "← 返回输入界面",
         liveGrafanaLink: "实时 Grafana 监控与日志",
         completeBtn: "完成并返回前端界面 →",
+        waitingBtn: "正在渲染视频...",
         s4Tag: "03 / 前端输出结果",
         s4Title: "您的 AI 视频已生成",
         s4Desc: "视频已在云端后端完成渲染，并已成功回传至前端用户界面。",
@@ -918,7 +927,7 @@
             title: "签名 URL 与 GPU",
             tag: "存储安全与无服务器推理",
             engines: ["Google Cloud Storage (GCS)", "IAM v4 签名 URL", "Serverless GPU 工作节点"],
-            desc: "后端签发有时效限制的 GCS v4 签名 URL（用于读取输入图片与直传视频），并将工作流派发至 Serverless GPU 节点。渲染完成 .mp4 直传对象存储，不占用后端 VM 内存。",
+            desc: "后端签发有时效限制的 GCS v4 签名 URL（用于读取输入图片与直传视频），并将工作流派发至 Serverless GPU 节点。渲染完成的 .mp4 直传对象存储，不占用后端 VM 内存。",
             proofLabel: "backend/main.py (Signed URL)",
             proofUrl: `${GITHUB_REPO}/blob/main/backend/main.py`,
             liveLabel: "Storage Terraform 配置",
@@ -939,8 +948,8 @@
         devops: [
           {
             badge: "IAC / 高可用",
-            title: "Terraform & MIG",
-            tag: "INFRASTRUCTURE AS CODE",
+            title: "Terraform 与 MIG",
+            tag: "基础设施即代码",
             engines: ["Terraform (HCL)", "GCS 远程状态", "实例模板与 MIG", "Cloud IAP"],
             desc: "所有 VPC、私有子网、Cloud NAT、Cloud SQL、负载均衡器及托管实例组均通过 Terraform 声明式构建。State 文件托管于 GCS，运维 SSH 访问严格限制通过 Cloud IAP 隧道完成。",
             proofLabel: "terraform/compute.tf",
@@ -960,13 +969,13 @@
             liveUrl: `${GITHUB_REPO}/blob/main/docs/billing-budget-alert.png`
           },
           {
-            badge: "CI/CD",
+            badge: "CI/CD & GITOPS",
             title: "GitHub Actions",
-            tag: "自动化交付流水线",
-            engines: ["GitHub Actions", "Workload Identity Federation", "GCP Artifact Registry", "Cloud IAP 部署"],
-            desc: "多分支 PR 工作流、pytest 自动化单元测试、terraform 验证、语义化版本控制标签自动生成，以及向私有 VM 执行零停机滚动部署。",
-            proofLabel: ".github/workflows/deploy.yml",
-            proofUrl: `${GITHUB_REPO}/blob/main/.github/workflows/deploy.yml`,
+            tag: "PR 门禁、版本管理与紧急回滚",
+            engines: ["GitHub Actions", "Pytest 与 Terraform Plan", "Workload Identity Federation", "自动 Git Tag 与回滚"],
+            desc: "多分支研发流 (dev → PR → main)：提交 PR 自动触发 Pytest 单元测试与 Terraform Plan 预检；合并至 main 后通过无密钥 WIF 触发语义化版本构建、MIG 滚动发布、自动打 Git Tag，并支持一键紧急回滚。",
+            proofLabel: ".github/workflows/ (ci, deploy, rollback)",
+            proofUrl: `${GITHUB_REPO}/tree/main/.github/workflows`,
             liveLabel: "查看实时流水线 (Actions)",
             liveUrl: `${GITHUB_REPO}/actions`
           },
@@ -982,7 +991,7 @@
             liveUrl: `${GITHUB_REPO}/blob/main/.github/workflows/build-gpu-image.yml`
           },
           {
-            badge: "OBSERVABILITY",
+            badge: "可观测性",
             title: "指标、日志与链路追踪",
             tag: "PROMETHEUS, FLUENT BIT & LOKI",
             engines: ["Prometheus", "Fluent Bit", "Grafana Loki", "Grafana (只读模式)", "GCP Cloud Logging"],
@@ -993,9 +1002,9 @@
             liveUrl: "/grafana/"
           },
           {
-            badge: "BACKUP / DR",
+            badge: "备份与容灾",
             title: "自动化备份与灾备",
-            tag: "DATA PROTECTION & RECOVERY",
+            tag: "数据保护与快速恢复",
             engines: ["Cloud SQL 自动备份", "pg_dump 定时任务", "GCS 备份存储桶", "磁盘快照"],
             desc: "容灾方案结合了 Cloud SQL 自动备份与定时压缩 pg_dump 备份至 GCS（14 天生命周期留存），并配置持久化磁盘快照策略以确保异常发生时可快速恢复。",
             proofLabel: "scripts/backup-db.sh",
@@ -1037,7 +1046,7 @@
       if (isApiOnline) {
         dot.className = "w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]";
         text.className = "text-emerald-300 truncate";
-        text.innerText = `${t.apiOnline} • ${onlineVmName} (${APP_VERSION})`;
+        text.innerText = `${t.apiOnline} • ${onlineVmName}`;
       } else {
         dot.className = "w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_10px_#f43f5e]";
         text.className = "text-rose-400 truncate";
@@ -1351,7 +1360,30 @@
       `;
     }
 
-    let APP_VERSION = "v1.0.0";
+    function startAutoTour() {
+      clearInterval(tourTimer);
+      document.getElementById('resumeTourBtn').classList.add('hidden');
+      tourTimer = setInterval(() => {
+        activeLayer = "runtime";
+        activeIndex = (activeIndex + 1) % TRANSLATIONS[currentLang].runtime.length;
+        renderDiagram();
+      }, 3000);
+    }
+
+    function inspectNode(layer, idx) {
+      clearInterval(tourTimer);
+      tourTimer = null;
+      activeLayer = layer;
+      activeIndex = idx;
+      document.getElementById('resumeTourBtn').classList.remove('hidden');
+      renderDiagram();
+    }
+
+    function resumeAutoTour() {
+      activeLayer = "runtime";
+      startAutoTour();
+    }
+
     async function checkHealth() {
       try {
         const res = await fetch('/api/health');
@@ -1359,7 +1391,6 @@
         const data = await res.json();
         isApiOnline = true;
         onlineVmName = data.vm_hostname;
-        if (data.version) APP_VERSION = data.version;
       } catch {
         isApiOnline = false;
       }
