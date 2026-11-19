@@ -637,10 +637,10 @@
             tag: "CUSTOM CONTAINER BAKING PIPELINE",
             engines: ["GCP Compute Engine VM", "GCP Persistent Disk", "Self-Hosted GitHub Runner", "Docker Hub"],
             desc: "Model AI berukuran besar di-bake ke dalam custom Docker image memakai Self-Hosted GitHub Actions Runner di atas VM GCP dengan Persistent Disk sebagai build cache, lalu di-push ke Docker Hub untuk ditarik Serverless GPU Worker.",
-            proofLabel: "gpu-worker/Dockerfile",
-            proofUrl: `${GITHUB_REPO}/tree/main/gpu-worker`,
+            proofLabel: "ai-engine/ (Base & Worker)",
+            proofUrl: `${GITHUB_REPO}/tree/main/ai-engine`,
             liveLabel: "Runner Workflow YAML",
-            liveUrl: `${GITHUB_REPO}/blob/main/.github/workflows/build-gpu-image.yml`
+            liveUrl: `${GITHUB_REPO}/tree/main/ai-engine/workflows`
           },
           {
             badge: "OBSERVABILITY",
@@ -811,10 +811,10 @@
             tag: "CUSTOM CONTAINER BAKING PIPELINE",
             engines: ["GCP Compute Engine VM", "GCP Persistent Disk", "Self-Hosted GitHub Runner", "Docker Hub"],
             desc: "Large AI model weights are baked into custom Docker images using a Self-Hosted GitHub Actions Runner on a GCP Compute Engine VM with a dedicated Persistent Disk build cache, then pushed to Docker Hub for the Serverless GPU Worker.",
-            proofLabel: "gpu-worker/Dockerfile",
-            proofUrl: `${GITHUB_REPO}/tree/main/gpu-worker`,
+            proofLabel: "ai-engine/ (Base & Worker)",
+            proofUrl: `${GITHUB_REPO}/tree/main/ai-engine`,
             liveLabel: "Runner Workflow YAML",
-            liveUrl: `${GITHUB_REPO}/blob/main/.github/workflows/build-gpu-image.yml`
+            liveUrl: `${GITHUB_REPO}/tree/main/ai-engine/workflows`
           },
           {
             badge: "OBSERVABILITY",
@@ -985,10 +985,10 @@
             tag: "大型容器镜像打包流水线",
             engines: ["GCP Compute Engine VM", "GCP Persistent Disk", "自托管 GitHub Runner", "Docker Hub"],
             desc: "利用部署在 GCP VM 上的自托管 GitHub Runner 并挂载大容量持久化磁盘作为构建缓存，将大型开源 AI 模型打包进自定义 Docker 镜像后推送至 Docker Hub 供 GPU 节点拉取。",
-            proofLabel: "gpu-worker/Dockerfile",
-            proofUrl: `${GITHUB_REPO}/tree/main/gpu-worker`,
-            liveLabel: "Runner 工作流 YAML",
-            liveUrl: `${GITHUB_REPO}/blob/main/.github/workflows/build-gpu-image.yml`
+            proofLabel: "ai-engine/ (Base & Worker)",
+            proofUrl: `${GITHUB_REPO}/tree/main/ai-engine`,
+            liveLabel: "Runner 工作流 (YAML)",
+            liveUrl: `${GITHUB_REPO}/tree/main/ai-engine/workflows`
           },
           {
             badge: "可观测性",
