@@ -16,5 +16,5 @@ __pycache__/
 *.pyc
 .DS_Store
 
-# ltx workflow files
-backend/video_ltx2_3_i2v_workflow.json
+# Private inference workflow configs
+backend/*workflow*.json
