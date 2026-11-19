@@ -48,8 +48,8 @@ resource "google_project_iam_member" "backend_sql_client" {
 resource "google_secret_manager_secret" "app_secrets" {
   for_each = toset([
     "abe-vip-passcode",
-    "abe-runpod-api-key",
-    "abe-runpod-endpoint-id",
+    "abe-gpu-api-key",
+    "abe-gpu-dispatch-url",
     "abe-webhook-secret",
     "abe-db-password"
   ])

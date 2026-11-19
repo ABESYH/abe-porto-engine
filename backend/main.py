@@ -61,8 +61,8 @@ DB_PASS = os.getenv("DB_PASS", "geneta_pass")
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 
 VIP_PASSCODE = os.getenv("VIP_PASSCODE", "ABE2026")
-GPU_API_KEY = os.getenv("RUNPOD_API_KEY", "")
-GPU_ENDPOINT_ID = os.getenv("RUNPOD_ENDPOINT_ID", "")
+GPU_API_KEY = os.getenv("GPU_API_KEY", "")
+GPU_DISPATCH_URL = os.getenv("GPU_DISPATCH_URL", "")
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "")
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8080")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "local-webhook-secret")
@@ -89,7 +89,7 @@ VOICE_PROMPTS = {
     ),
 }
 
-WORKFLOW_PATH = "video_ltx2_3_i2v_workflow.json"
+WORKFLOW_PATH = "inference_workflow.json"
 WORKFLOW_TEMPLATE = None
 if os.path.exists(WORKFLOW_PATH):
     with open(WORKFLOW_PATH, "r") as f:
@@ -104,7 +104,7 @@ def get_workflow_template():
         from google.cloud import storage
 
         client = storage.Client()
-        blob = client.bucket(GCS_BUCKET_NAME).blob("config/video_ltx2_3_i2v_workflow.json")
+        blob = client.bucket(GCS_BUCKET_NAME).blob("config/inference_workflow.json")
         if blob.exists():
             WORKFLOW_TEMPLATE = json.loads(blob.download_as_text())
             logger.info("Loaded workflow template from private GCS bucket", extra={"event": "workflow_loaded_gcs"})
@@ -252,7 +252,7 @@ async def generate_video(
         logger.warning("Rejected invalid GPU access passcode", extra={"job_id": job_id, "event": "auth_rejected"})
         raise HTTPException(status_code=401, detail="Invalid GPU access passcode.")
 
-    use_gpu_worker = (trimmed_passcode == VIP_PASSCODE and bool(GPU_API_KEY) and bool(GPU_ENDPOINT_ID))
+    use_gpu_worker = (trimmed_passcode == VIP_PASSCODE and bool(GPU_API_KEY) and bool(GPU_DISPATCH_URL))
     execution_mode = "SERVERLESS_GPU" if use_gpu_worker else "CLOUD_SIMULATION"
 
     try:
@@ -320,7 +320,7 @@ async def generate_video(
 
         webhook_url = f"{PUBLIC_BASE_URL}/api/webhook?jobId={job_id}&token={WEBHOOK_SECRET}"
         resp = requests.post(
-            f"https://api.runpod.ai/v2/{GPU_ENDPOINT_ID}/run",
+            GPU_DISPATCH_URL,
             headers={"Authorization": f"Bearer {GPU_API_KEY}", "Content-Type": "application/json"},
             json={
                 "input": {

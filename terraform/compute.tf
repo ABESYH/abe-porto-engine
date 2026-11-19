@@ -189,8 +189,8 @@ resource "google_compute_instance_template" "app_template" {
 
     DB_PASS=$(gcloud secrets versions access latest --secret="abe-db-password")
     VIP_PASS=$(gcloud secrets versions access latest --secret="abe-vip-passcode")
-    RUNPOD_KEY=$(gcloud secrets versions access latest --secret="abe-runpod-api-key")
-    RUNPOD_EP=$(gcloud secrets versions access latest --secret="abe-runpod-endpoint-id")
+    GPU_KEY=$(gcloud secrets versions access latest --secret="abe-gpu-api-key")
+    GPU_URL=$(gcloud secrets versions access latest --secret="abe-gpu-dispatch-url")
     WH_SECRET=$(gcloud secrets versions access latest --secret="abe-webhook-secret")
 
     IMAGE="${var.region}-docker.pkg.dev/${var.project_id}/abe-porto-repo/abe-backend:latest"
@@ -206,8 +206,8 @@ resource "google_compute_instance_template" "app_template" {
       -e DB_PASS="$DB_PASS" \
       -e REDIS_HOST="10.10.1.10" \
       -e VIP_PASSCODE="$VIP_PASS" \
-      -e RUNPOD_API_KEY="$RUNPOD_KEY" \
-      -e RUNPOD_ENDPOINT_ID="$RUNPOD_EP" \
+      -e GPU_API_KEY="$GPU_KEY" \
+      -e GPU_DISPATCH_URL="$GPU_URL" \
       -e GCS_BUCKET_NAME="${google_storage_bucket.media_bucket.name}" \
       -e PUBLIC_BASE_URL="http://${google_compute_global_address.lb_ip.address}" \
       -e WEBHOOK_SECRET="$WH_SECRET" \
