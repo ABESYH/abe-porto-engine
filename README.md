@@ -148,10 +148,10 @@ An interactive, enterprise-grade cloud architecture powering asynchronous AI vid
 
 ## 👨‍💻 Author & Contact
 
-**ABE**
+**ABE**  
 *Cloud & DevOps Engineer • SaaS Builder*
 
-**Portfolio:** [https://abeporto.my.id](https://abeporto.my.id)
-**LinkedIn:** [https://linkedin.com/in/aabbee](https://linkedin.com/in/aabbee)
-**GitHub:** [https://github.com/ABESYH](https://github.com/ABESYH)
-**Email:** [sr.abesyh@gmail.com](mailto:sr.abesyh@gmail.com)
+- **Portfolio:** [https://abeporto.my.id](https://abeporto.my.id)
+- **LinkedIn:** [https://linkedin.com/in/aabbee](https://linkedin.com/in/aabbee)
+- **GitHub:** [https://github.com/ABESYH](https://github.com/ABESYH)
+- **Email:** [sr.abesyh@gmail.com](mailto:sr.abesyh@gmail.com)
