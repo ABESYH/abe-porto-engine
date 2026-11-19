@@ -59,10 +59,12 @@ jobs:
           sed -i "s/__APP_RELEASE__/v1.0.${{ github.run_number }}/g" ./frontend/index.html
           gcloud storage cp ./frontend/index.html gs://abe-porto-web-501516/index.html
 
-      - name: Trigger Zero-Downtime Rolling Restart on App MIG
+      - name: Zero-Downtime Surge Replace on App MIG
         run: |
-          gcloud compute instance-groups managed rolling-action restart abe-app-mig \
-            --region=asia-southeast2
+          gcloud compute instance-groups managed rolling-action replace abe-app-mig \
+            --region=asia-southeast2 \
+            --max-surge=2 \
+            --max-unavailable=0
       
       - name: Create and Push Git Tag Automatically
         run: |
