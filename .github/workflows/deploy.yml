@@ -58,7 +58,7 @@ jobs:
       - name: Deploy Frontend to GCS Web Bucket
         run: |
           sed -i "s/__APP_RELEASE__/v1.0.${{ github.run_number }}/g" ./frontend/index.html
-          gcloud storage cp ./frontend/index.html gs://abe-porto-web-501516/index.html
+          gcloud storage cp --cache-control="no-cache, max-age=0" ./frontend/index.html gs://abe-porto-web-501516/index.html
 
       - name: Zero-Downtime Surge Replace on App MIG
         run: |
