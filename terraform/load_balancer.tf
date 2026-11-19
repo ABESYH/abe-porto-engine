@@ -1,11 +1,11 @@
-# @@@@@@@@@ Backend Bucket for Static Frontend (index.html & assets) @@@@@@@@@@@@
+# Backend Bucket for Static Frontend (index.html & assets)
 resource "google_compute_backend_bucket" "web_backend" {
   name        = "abe-web-backend-bucket"
   bucket_name = google_storage_bucket.web_bucket.name
   enable_cdn  = false
 }
 
-# @@@@@@@@@ Unmanaged Instance Group wrapping Ops VM for Grafana routing @@@@@@@@@
+# Unmanaged Instance Group wrapping Ops VM for Grafana routing
 resource "google_compute_instance_group" "ops_group" {
   name      = "abe-ops-group"
   zone      = "${var.region}-a"
@@ -30,7 +30,7 @@ resource "google_compute_health_check" "grafana_hc" {
   }
 }
 
-# @@@@@@@@@@ Backend Service for Grafana @@@@@@@@@@@@@
+# Backend Service for Grafana
 resource "google_compute_backend_service" "grafana_backend" {
   name                  = "abe-grafana-backend-service"
   protocol              = "HTTP"
@@ -44,7 +44,7 @@ resource "google_compute_backend_service" "grafana_backend" {
   }
 }
 
-# @@@@@@@@@@ Backend Service for 2-VM App MIG (High Availability) @@@@@@@@@@@
+# Backend Service for 2-VM App MIG (High Availability)
 resource "google_compute_backend_service" "api_backend" {
   name                  = "abe-api-backend-service"
   protocol              = "HTTP"
@@ -58,7 +58,7 @@ resource "google_compute_backend_service" "api_backend" {
   }
 }
 
-# @@@@@@@ Path-Based URL Routing Map @@@@@@@@@
+# Path-Based URL Routing Map
 resource "google_compute_url_map" "url_map" {
   name            = "abe-url-map"
   default_service = google_compute_backend_bucket.web_backend.id
@@ -84,9 +84,45 @@ resource "google_compute_url_map" "url_map" {
   }
 }
 
+# Google-Managed SSL Certificate (Free & Auto-Renewed)
+resource "google_compute_managed_ssl_certificate" "ssl_cert" {
+  name = "abe-ssl-cert"
+
+  managed {
+    domains = ["abeporto.my.id", "www.abeporto.my.id"]
+  }
+}
+
+# HTTPS Proxy & Port 443 Forwarding Rule
+resource "google_compute_target_https_proxy" "https_proxy" {
+  name             = "abe-https-proxy"
+  url_map          = google_compute_url_map.url_map.id
+  ssl_certificates = [google_compute_managed_ssl_certificate.ssl_cert.id]
+}
+
+resource "google_compute_global_forwarding_rule" "https_forwarding_rule" {
+  name                  = "abe-https-forwarding-rule"
+  ip_protocol           = "TCP"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  port_range            = "443"
+  target                = google_compute_target_https_proxy.https_proxy.id
+  ip_address            = google_compute_global_address.lb_ip.id
+}
+
+# Redirect all HTTP (Port 80) traffic to HTTPS (Port 443)
+resource "google_compute_url_map" "http_redirect" {
+  name = "abe-http-redirect-map"
+
+  default_url_redirect {
+    https_redirect         = true
+    redirect_response_code = "MOVED_PERMANENTLY_DEFAULT"
+    strip_query            = false
+  }
+}
+
 resource "google_compute_target_http_proxy" "http_proxy" {
   name    = "abe-http-proxy"
-  url_map = google_compute_url_map.url_map.id
+  url_map = google_compute_url_map.http_redirect.id
 }
 
 resource "google_compute_global_forwarding_rule" "http_forwarding_rule" {
