@@ -211,7 +211,6 @@ resource "google_compute_instance_template" "app_template" {
       -e GCS_BUCKET_NAME="${google_storage_bucket.media_bucket.name}" \
       -e PUBLIC_BASE_URL="http://${google_compute_global_address.lb_ip.address}" \
       -e WEBHOOK_SECRET="$WH_SECRET" \
-      -e APP_VERSION="v1.0.0" \
       "$IMAGE"
 
     docker run -d --name node-exporter --restart always --net="host" --pid="host" prom/node-exporter:v1.8.2
@@ -291,6 +290,14 @@ resource "google_compute_region_instance_group_manager" "app_mig" {
   auto_healing_policies {
     health_check      = google_compute_health_check.app_hc.id
     initial_delay_sec = 240
+  }
+
+  update_policy {
+    type                           = "PROACTIVE"
+    minimal_action                 = "REPLACE"
+    most_disruptive_allowed_action = "REPLACE"
+    max_surge_fixed                = 2
+    max_unavailable_fixed          = 0
   }
 }
 
