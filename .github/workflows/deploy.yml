@@ -45,6 +45,7 @@ jobs:
           echo "Building version: $VERSION_TAG (Commit: ${{ github.sha }})"
           
           docker build \
+            --build-arg APP_VERSION="${VERSION_TAG}" \
             -t "${IMAGE_URI}:${{ github.sha }}" \
             -t "${IMAGE_URI}:${VERSION_TAG}" \
             -t "${IMAGE_URI}:latest" \
