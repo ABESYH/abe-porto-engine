@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       target_version:
-        description: 'Target Version Tag to Rollback (e.g. v1.0.42 or latest)'
+        description: 'Target Version Tag in Artifact Registry (e.g. v1.0.9)'
         required: true
-        default: 'latest'
 
 permissions:
   contents: 'read'
@@ -14,7 +13,7 @@ permissions:
 
 jobs:
   rollback:
-    name: Execute Emergency Rollback
+    name: Rollback Image Tag & Surge Replace MIG
     runs-on: ubuntu-latest
 
     steps:
@@ -29,9 +28,18 @@ jobs:
         with:
           project_id: 'gcp-ace-501516'
 
-      - name: Trigger Rolling Restart for Rollback
+      - name: Repoint :latest Tag to Target Version in Artifact Registry
         run: |
-          echo "Initiating emergency rollback to version: ${{ inputs.target_version }}"
-          gcloud compute instance-groups managed rolling-action restart abe-app-mig \
-            --region=asia-southeast2
-          echo "Rollback trigger completed successfully."
+          IMAGE_URI="asia-southeast2-docker.pkg.dev/gcp-ace-501516/abe-porto-repo/abe-backend"
+          echo "Repointing :latest -> ${{ inputs.target_version }}..."
+          gcloud artifacts docker tags add \
+            "${IMAGE_URI}:${{ inputs.target_version }}" \
+            "${IMAGE_URI}:latest"
+
+      - name: Zero-Downtime Surge Replace on App MIG
+        run: |
+          gcloud compute instance-groups managed rolling-action replace abe-app-mig \
+            --region=asia-southeast2 \
+            --max-surge=2 \
+            --max-unavailable=0
+          echo "Rollback to ${{ inputs.target_version }} triggered with zero downtime!"
