@@ -193,7 +193,7 @@ resource "google_compute_instance_template" "app_template" {
     RUNPOD_EP=$(gcloud secrets versions access latest --secret="abe-runpod-endpoint-id")
     WH_SECRET=$(gcloud secrets versions access latest --secret="abe-webhook-secret")
 
-    IMAGE="${var.region}-docker.pkg.dev/${var.project_id}/abe-porto-repo/abe-backend:v1.0.0"
+    IMAGE="${var.region}-docker.pkg.dev/${var.project_id}/abe-porto-repo/abe-backend:latest"
     docker pull "$IMAGE"
 
     docker rm -f abe-backend node-exporter fluent-bit || true
