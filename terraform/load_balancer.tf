@@ -58,13 +58,19 @@ resource "google_compute_backend_service" "api_backend" {
   }
 }
 
-# Path-Based URL Routing Map
+# Path-Based URL Routing Map (Only serve abeporto.my.id; redirect raw IP access)
 resource "google_compute_url_map" "url_map" {
-  name            = "abe-url-map"
-  default_service = google_compute_backend_bucket.web_backend.id
+  name = "abe-url-map"
+
+  default_url_redirect {
+    host_redirect          = "abeporto.my.id"
+    https_redirect         = true
+    redirect_response_code = "MOVED_PERMANENTLY_DEFAULT"
+    strip_query            = true
+  }
 
   host_rule {
-    hosts        = ["*"]
+    hosts        = ["abeporto.my.id", "www.abeporto.my.id"]
     path_matcher = "abe-paths"
   }
 
@@ -109,11 +115,12 @@ resource "google_compute_global_forwarding_rule" "https_forwarding_rule" {
   ip_address            = google_compute_global_address.lb_ip.id
 }
 
-# Redirect all HTTP (Port 80) traffic to HTTPS (Port 443)
+# Redirect all HTTP (Port 80) traffic (including raw IP) directly to https://abeporto.my.id
 resource "google_compute_url_map" "http_redirect" {
   name = "abe-http-redirect-map"
 
   default_url_redirect {
+    host_redirect          = "abeporto.my.id"
     https_redirect         = true
     redirect_response_code = "MOVED_PERMANENTLY_DEFAULT"
     strip_query            = false
