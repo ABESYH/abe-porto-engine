@@ -8,7 +8,7 @@
 
 An interactive, enterprise-grade cloud architecture powering asynchronous AI video synthesis workloads. Built and operated independently by **Abe (Abrar Syah Putra)**, translating 3.5+ years of production SaaS builder experience into modern Cloud & DevOps engineering.
 
-> **Live System:** [https://abeporto.my.id](https://abeporto.my.id) *(or via Static Load Balancer IP: `http://35.201.72.8`)*  
+> **Live System:** [https://abeporto.my.id](https://abeporto.my.id) *(Experience live cloud engineering)*  
 > **Read-Only Telemetry:** [https://abeporto.my.id/grafana/](https://abeporto.my.id/grafana/) *(Real-time Prometheus Metrics & Loki Logs)*
 
 ---
