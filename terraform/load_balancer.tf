@@ -9,7 +9,7 @@ resource "google_compute_backend_bucket" "web_backend" {
 resource "google_compute_instance_group" "ops_group" {
   name      = "abe-ops-group"
   zone      = "${var.region}-a"
-  instances = [google_compute_instance.ops_vm.id]
+  instances = [google_compute_instance.ops_vm.self_link]
 
   named_port {
     name = "http-grafana"

@@ -130,7 +130,8 @@ resource "google_compute_instance" "ops_vm" {
       prom/prometheus:v2.54.1
 
     docker run -d --name grafana --restart always --network ops-net -p 3000:3000 \
-      -e GF_SERVER_ROOT_URL="http://${google_compute_global_address.lb_ip.address}/grafana/" \
+      -e GF_SERVER_DOMAIN="abeporto.my.id" \
+      -e GF_SERVER_ROOT_URL="https://abeporto.my.id/grafana/" \
       -e GF_SERVER_SERVE_FROM_SUB_PATH="true" \
       -e GF_AUTH_ANONYMOUS_ENABLED="true" \
       -e GF_AUTH_ANONYMOUS_ORG_ROLE="Viewer" \
@@ -209,7 +210,7 @@ resource "google_compute_instance_template" "app_template" {
       -e GPU_API_KEY="$GPU_KEY" \
       -e GPU_DISPATCH_URL="$GPU_URL" \
       -e GCS_BUCKET_NAME="${google_storage_bucket.media_bucket.name}" \
-      -e PUBLIC_BASE_URL="http://${google_compute_global_address.lb_ip.address}" \
+      -e PUBLIC_BASE_URL="https://abeporto.my.id" \
       -e WEBHOOK_SECRET="$WH_SECRET" \
       "$IMAGE"
 
@@ -249,7 +250,6 @@ resource "google_compute_instance_template" "app_template" {
     create_before_destroy = true
   }
 
-  depends_on = [google_compute_instance.ops_vm]
 }
 
 resource "google_compute_health_check" "app_hc" {
